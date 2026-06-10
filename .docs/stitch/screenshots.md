@@ -1,6 +1,6 @@
 # WealthFlow 流程截圖
 
-以下截圖由 `npm run screenshots` 產生，來源為本機 React/Next 介面。
+以下截圖由 `npm run screenshots` 產生，來源為本機 React/Next 介面，輸出位置為 `.docs/stitch/`。
 
 1. `01-onboarding-flow.png` - 新手引導流程
 2. `02-main-dashboard.png` - 主儀表板

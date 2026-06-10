@@ -132,6 +132,18 @@ const watchlist = [
 const growth = [22, 28, 34, 42, 50, 57, 66, 73, 81, 94, 108, 124];
 const contribution = [18, 23, 28, 33, 38, 43, 48, 53, 58, 63, 68, 73];
 const months = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+const sectionClassName = "scroll-mt-28 space-y-4";
+const workflowSteps = [
+  "新手引導",
+  "主儀表板",
+  "投資組合",
+  "交易流程",
+  "定期定額",
+  "退休規劃",
+  "觀察清單",
+  "報表",
+  "設定"
+];
 
 export default function Home() {
   const { monthlyContribution, retirementAge, setMonthlyContribution, setRetirementAge } =
@@ -148,6 +160,7 @@ export default function Home() {
           <Topbar />
           <div className="mx-auto max-w-[1440px] space-y-8 px-4 py-6 md:px-8">
             <AlertBanner />
+            <WorkflowRail />
             <OnboardingFlow />
             <Dashboard fireProgress={fireProgress} />
             <Portfolio />
@@ -175,7 +188,7 @@ export default function Home() {
 
 function Sidebar() {
   return (
-    <aside className="hidden border-r border-border bg-white px-5 py-6 lg:block">
+    <aside className="sticky top-0 hidden h-screen border-r border-border bg-white px-5 py-6 lg:block">
       <div className="mb-8 flex items-center gap-3">
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-white">
           <CircleDollarSign className="h-6 w-6" />
@@ -212,6 +225,25 @@ function Sidebar() {
           僅同步市場價格與投資紀錄，不儲存券商登入密碼。
         </p>
       </Card>
+      <Card className="mt-4 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">本月進度</p>
+        <div className="mt-3 space-y-3">
+          <div>
+            <div className="mb-1 flex justify-between text-xs">
+              <span>定期定額</span>
+              <span>$500 / $500</span>
+            </div>
+            <ProgressBar value={100} />
+          </div>
+          <div>
+            <div className="mb-1 flex justify-between text-xs">
+              <span>FIRE 進度</span>
+              <span>42%</span>
+            </div>
+            <ProgressBar value={42} subtle />
+          </div>
+        </div>
+      </Card>
     </aside>
   );
 }
@@ -220,13 +252,17 @@ function Topbar() {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-background/95 px-4 py-4 backdrop-blur md:px-8">
       <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold md:text-2xl">WealthFlow 投資儀表板</h1>
           <p className="hidden text-sm text-muted-foreground sm:block">
             追蹤 ETF 資產、模擬長期報酬、估算退休準備度
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm text-muted-foreground xl:flex">
+            <Clock3 className="h-4 w-4 text-primary" />
+            2026/06/10 14:42 已同步
+          </div>
           <Button className="hidden gap-2 md:inline-flex">
             <Search className="h-4 w-4" />
             搜尋 ETF
@@ -240,6 +276,32 @@ function Topbar() {
         </div>
       </div>
     </header>
+  );
+}
+
+function WorkflowRail() {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col gap-4 p-4 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-primary">Stitch 切版流程</p>
+          <h2 className="mt-1 text-lg font-semibold">完整 ETF 財務規劃工作流</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            對照 `.docs/stitch` 設計稿，將所有核心流程集中在同一個可掃描的 SaaS 工作台。
+          </p>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-3 xl:w-[620px]">
+          {workflowSteps.map((step, index) => (
+            <div key={step} className="flex items-center gap-2 rounded-md border border-border bg-slate-50 px-3 py-2 text-sm">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-semibold text-white">
+                {index + 1}
+              </span>
+              <span className="truncate">{step}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -263,12 +325,13 @@ function AlertBanner() {
 
 function OnboardingFlow() {
   return (
-    <section id="onboarding" className="space-y-4">
+    <section id="onboarding" className={sectionClassName}>
       <SectionHeading
         eyebrow="新手引導"
         title="建立長期財富計畫"
         description="從財務輪廓、投資風格到 ETF 持倉設定，讓使用者快速進入可用的儀表板。"
       />
+      <Stepper steps={["歡迎", "財務輪廓", "投資組合設定"]} activeIndex={2} />
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="p-5">
           <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50 text-primary">
@@ -337,7 +400,7 @@ function OnboardingFlow() {
 
 function Dashboard({ fireProgress }: { fireProgress: number }) {
   return (
-    <section id="dashboard" className="space-y-4">
+    <section id="dashboard" className={sectionClassName}>
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
         <SectionHeading
           eyebrow="主產品畫面"
@@ -388,7 +451,7 @@ function Dashboard({ fireProgress }: { fireProgress: number }) {
 
 function Portfolio() {
   return (
-    <section id="portfolio" className="space-y-4">
+    <section id="portfolio" className={sectionClassName}>
       <SectionHeading
         eyebrow="投資組合"
         title="檢視目前 ETF 持倉"
@@ -465,7 +528,7 @@ function Portfolio() {
 
 function TransactionFlow() {
   return (
-    <section id="transaction" className="space-y-4">
+    <section id="transaction" className={sectionClassName}>
       <SectionHeading
         eyebrow="交易流程"
         title="新增交易表單"
@@ -494,7 +557,7 @@ function TransactionFlow() {
         </Card>
         <div className="grid gap-4">
           <StateCard type="error" title="驗證錯誤" message="股數與價格不可為空，請確認交易日期與幣別。" action="修正欄位" />
-          <StateCard type="success" title="新增成功" message="交易已成功加入投資組合，配置與成本已更新。" action="查看交易紀錄" />
+          <StateCard type="success" title="交易已成功新增" message="交易已成功新增，投資組合配置與成本已同步更新。" action="查看交易紀錄" />
         </div>
       </div>
     </section>
@@ -511,7 +574,7 @@ function DcaSimulator({
   setMonthlyContribution: (amount: number) => void;
 }) {
   return (
-    <section id="simulator" className="space-y-4">
+    <section id="simulator" className={sectionClassName}>
       <SectionHeading
         eyebrow="定期定額模擬"
         title="長期投入與報酬推演"
@@ -570,7 +633,7 @@ function RetirementPlanner({
   setRetirementAge: (age: number) => void;
 }) {
   return (
-    <section id="retirement" className="space-y-4">
+    <section id="retirement" className={sectionClassName}>
       <SectionHeading
         eyebrow="退休規劃"
         title="估算退休準備度"
@@ -640,7 +703,7 @@ function RetirementPlanner({
 
 function Watchlist() {
   return (
-    <section id="watchlist" className="space-y-4">
+    <section id="watchlist" className={sectionClassName}>
       <SectionHeading
         eyebrow="ETF 觀察清單"
         title="追蹤關注 ETF"
@@ -701,7 +764,7 @@ function Watchlist() {
 
 function Reports() {
   return (
-    <section id="reports" className="space-y-4">
+    <section id="reports" className={sectionClassName}>
       <SectionHeading
         eyebrow="月報"
         title="每月投資報告"
@@ -738,7 +801,7 @@ function Reports() {
 
 function SettingsPanel() {
   return (
-    <section id="settings" className="space-y-4">
+    <section id="settings" className={sectionClassName}>
       <SectionHeading
         eyebrow="設定"
         title="個人資料與投資假設"
@@ -755,7 +818,7 @@ function SettingsPanel() {
 
 function UiStates() {
   return (
-    <section id="states" className="space-y-4">
+    <section id="states" className={sectionClassName}>
       <SectionHeading
         eyebrow="UI 狀態"
         title="主要頁面狀態範例"
@@ -791,6 +854,39 @@ function SectionHeading({ eyebrow, title, description }: { eyebrow: string; titl
       <h2 className="mt-1 text-2xl font-semibold">{title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
+  );
+}
+
+function Stepper({ steps, activeIndex }: { steps: string[]; activeIndex: number }) {
+  return (
+    <Card className="p-4">
+      <div className="grid gap-3 md:grid-cols-3">
+        {steps.map((step, index) => (
+          <div
+            key={step}
+            className={cn(
+              "flex items-center gap-3 rounded-lg border border-border bg-slate-50 p-3",
+              index <= activeIndex && "border-blue-100 bg-blue-50"
+            )}
+          >
+            <span
+              className={cn(
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-muted-foreground",
+                index <= activeIndex && "bg-primary text-white"
+              )}
+            >
+              {index + 1}
+            </span>
+            <div>
+              <p className="text-sm font-semibold">{step}</p>
+              <p className="text-xs text-muted-foreground">
+                {index < activeIndex ? "已完成" : index === activeIndex ? "目前步驟" : "待設定"}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 

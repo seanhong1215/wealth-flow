@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.WEALTHFLOW_URL ?? "http://localhost:3000";
-const outputDir = ".docs";
+const outputDir = ".docs/stitch";
 
 const desktopSections = [
   ["onboarding", "01-onboarding-flow.png"],

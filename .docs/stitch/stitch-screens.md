@@ -17,4 +17,4 @@ Stitch Project：`6104475919378402925`
 | 設定與 UI 狀態範例 | `6de43d5f6da542458a6ef4e7fdd69aa0` |
 | 手機版儀表板 | `27d2efdc1f4d43e99b033ec611e7a18f` |
 
-React 截圖輸出請參考 `.docs/screenshots.md`。
+React 截圖輸出請參考 `.docs/stitch/screenshots.md`。
