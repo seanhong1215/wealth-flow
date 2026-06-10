@@ -1,5 +1,6 @@
-import { AlertTriangle, PieChart, RefreshCw, TrendingUp, Plus } from "lucide-react";
+import { AlertTriangle, PieChart, RefreshCw, TrendingUp } from "lucide-react";
 import { AppShell } from "@/components/wealth/app-shell";
+import { AddTransactionButton, SyncPricesButton } from "@/components/wealth/actions";
 import { KpiCard, PageHeading, ProgressBar, TableHeader, Ticker } from "@/components/wealth/primitives";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,10 +19,7 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-        <Button className="gap-2 bg-white">
-          <RefreshCw className="h-4 w-4" />
-          同步價格
-        </Button>
+        <SyncPricesButton />
       </div>
       <PageHeading
         eyebrow="主產品畫面"
@@ -29,8 +27,8 @@ export default function DashboardPage() {
         description="最後更新時間會依 Massive API 回應更新，核心資料以真實市場價格為準。"
         actions={
           <div className="flex gap-2">
-            <Button variant="primary" className="gap-2"><Plus className="h-4 w-4" />新增交易</Button>
-            <Button className="gap-2"><RefreshCw className="h-4 w-4" />同步價格</Button>
+            <AddTransactionButton />
+            <SyncPricesButton />
           </div>
         }
       />

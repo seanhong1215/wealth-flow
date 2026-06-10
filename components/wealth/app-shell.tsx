@@ -2,18 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Bell,
-  CircleDollarSign,
-  Clock3,
-  Search,
-  Settings,
-  ShieldCheck
-} from "lucide-react";
+import { Bell, CircleDollarSign, Clock3, Settings, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { mobileRoutes, routes } from "@/lib/wealth-data";
 import { cn } from "@/lib/utils";
+import { SearchBox } from "./actions";
 import { ProgressBar } from "./primitives";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -113,10 +107,7 @@ function Topbar() {
             <Clock3 className="h-4 w-4 text-primary" />
             Massive API 伺服器代理
           </div>
-          <Button className="hidden gap-2 md:inline-flex">
-            <Search className="h-4 w-4" />
-            搜尋 ETF
-          </Button>
+          <SearchBox />
           <Button className="h-10 w-10 px-0" aria-label="通知">
             <Bell className="h-4 w-4" />
           </Button>

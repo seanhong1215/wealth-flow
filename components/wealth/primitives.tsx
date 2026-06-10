@@ -1,3 +1,5 @@
+"use client";
+
 import { AlertTriangle, CheckCircle2, Loader2, Plus, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -57,11 +59,15 @@ export function SummaryTile({ label, value, danger = false }: { label: string; v
 }
 
 export function TableHeader({ title, action }: { title: string; action?: string }) {
+  function handleAction() {
+    alert(`${action} 功能已觸發。`);
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
       <h3 className="font-semibold">{title}</h3>
       {action ? (
-        <Button className="gap-2" variant="primary">
+        <Button className="gap-2" variant="primary" onClick={handleAction}>
           <Plus className="h-4 w-4" />
           {action}
         </Button>
@@ -80,6 +86,10 @@ export function Ticker({ symbol }: { symbol: string }) {
 
 export function StateCard({ type, title, message, action }: { type: "success" | "error"; title: string; message: string; action: string }) {
   const Icon = type === "success" ? CheckCircle2 : AlertTriangle;
+  function handleAction() {
+    alert(`${action} 功能已觸發。`);
+  }
+
   return (
     <Card className="p-5">
       <div className={cn("mb-4 flex h-10 w-10 items-center justify-center rounded-md", type === "success" ? "bg-emerald-50 text-success" : "bg-red-50 text-danger")}>
@@ -87,18 +97,22 @@ export function StateCard({ type, title, message, action }: { type: "success" | 
       </div>
       <h3 className="font-semibold">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
-      <Button className="mt-5">{action}</Button>
+      <Button className="mt-5" onClick={handleAction}>{action}</Button>
     </Card>
   );
 }
 
 export function EmptyState() {
+  function handleAdd() {
+    alert("請前往投資組合頁新增第一檔 ETF。");
+  }
+
   return (
     <Card className="flex min-h-64 flex-col items-center justify-center p-5 text-center">
       <WalletCards className="mb-4 h-10 w-10 text-muted-foreground" />
       <h3 className="font-semibold">尚未新增任何持倉</h3>
       <p className="mt-2 text-sm text-muted-foreground">新增第一筆 ETF 後即可看到配置與損益。</p>
-      <Button className="mt-5" variant="primary">新增第一檔 ETF</Button>
+      <Button className="mt-5" variant="primary" onClick={handleAdd}>新增第一檔 ETF</Button>
     </Card>
   );
 }

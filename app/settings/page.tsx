@@ -12,12 +12,7 @@ export default function SettingsPage() {
         <SettingsCard title="投資假設" fields={["預期報酬 8%", "通膨率 2.5%", "提領率 4%", "稅率 10%"]} />
         <SettingsCard title="Massive API" fields={["環境變數 MASSIVE_API_KEY", "伺服器代理 /api/market", "前端不暴露 key", "快取 300 秒"]} />
       </div>
-      <PageHeading eyebrow="金流評估" title="如果要串接金流，建議如何呈現？" description="這個產品適合做 SaaS 訂閱，不適合處理投資本金或代下單。" />
-      <div className="grid gap-4 md:grid-cols-3">
-        {paymentRecommendations.map((item) => (
-          <Card key={item.title} className="p-5"><h3 className="font-semibold">{item.title}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p></Card>
-        ))}
-      </div>
+ 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <EmptyState />
         <LoadingState />
