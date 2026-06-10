@@ -1,7 +1,8 @@
 import { AppShell } from "@/components/wealth/app-shell";
-import { KpiCard, PageHeading, ProgressBar, TableHeader } from "@/components/wealth/primitives";
+import { AllocationPlanner } from "@/components/wealth/allocation-planner";
+import { KpiCard, PageHeading, TableHeader } from "@/components/wealth/primitives";
 import { Card } from "@/components/ui/card";
-import { allocations, holdings } from "@/lib/wealth-data";
+import { holdings } from "@/lib/wealth-data";
 
 export default function PortfolioPage() {
   return (
@@ -38,33 +39,7 @@ export default function PortfolioPage() {
           </table>
         </div>
       </Card>
-      <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
-        <Card className="p-5">
-          <h3 className="mb-4 font-semibold">配置比較</h3>
-          <div className="space-y-4">
-            {allocations.map((item, index) => (
-              <div key={item.symbol}>
-                <div className="mb-2 flex justify-between text-sm">
-                  <span className="font-medium">{item.symbol}</span>
-                  <span className="text-muted-foreground">目前 {holdings[index].current}% / 目標 {item.value}%</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <ProgressBar value={holdings[index].current} />
-                  <ProgressBar value={item.value} subtle />
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-        <Card className="p-5">
-          <h3 className="mb-4 font-semibold">再平衡建議</h3>
-          <div className="space-y-3 text-sm">
-            <p className="rounded-lg border border-border bg-amber-50 p-3">CSPX 超配 5%，下次投入可暫緩增加。</p>
-            <p className="rounded-lg border border-border bg-emerald-50 p-3">VWRA 低配 3%，建議下一筆定期定額優先補足。</p>
-            <p className="rounded-lg border border-border bg-slate-50 p-3">SGOV 落在目標區間內，維持現有配置。</p>
-          </div>
-        </Card>
-      </div>
+      <AllocationPlanner />
     </AppShell>
   );
 }
