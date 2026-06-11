@@ -12,7 +12,7 @@ export function AccountDashboard() {
 
   useEffect(() => {
     function load() {
-      setAccount(readAccountState());
+      readAccountState().then(setAccount).catch(() => setAccount(emptyAccountState));
     }
     load();
     window.addEventListener("wealthflow:account-updated", load);

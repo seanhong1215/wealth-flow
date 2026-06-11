@@ -10,13 +10,14 @@ async function run() {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   const steps = [];
+  const email = `wealthflow-test-${Date.now()}@example.com`;
 
   try {
     await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
-    await page.evaluate(() => localStorage.removeItem("wealthflow:user:seanhong1215:v2"));
+    await page.evaluate(() => localStorage.clear());
     await page.goto(`${baseUrl}/dashboard`, { waitUntil: "networkidle" });
     await page.waitForURL("**/login");
-    await page.getByLabel("Email").fill("seanhong1215@example.com");
+    await page.getByLabel("Email").fill(email);
     await page.getByRole("button", { name: "登入" }).click();
     await page.waitForURL("**/onboarding");
     await expectText(page, "登入 / Onboarding");

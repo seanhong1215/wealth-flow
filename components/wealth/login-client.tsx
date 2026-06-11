@@ -5,20 +5,24 @@ import { useState } from "react";
 import { CircleDollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { emptyAccountState, writeAccountState } from "@/lib/account-store";
+import { canEnterDashboard, loginAccount } from "@/lib/account-store";
 
 export function LoginClient() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
 
-  function login() {
+  async function login() {
     if (!email.includes("@")) {
       setError("請輸入有效的 Email。");
       return;
     }
-    writeAccountState({ ...emptyAccountState, userId: email, isAuthenticated: true });
-    router.push("/onboarding");
+    try {
+      const account = await loginAccount(email);
+      router.push(canEnterDashboard(account) ? "/dashboard" : "/onboarding");
+    } catch {
+      setError("登入失敗，請稍後再試。");
+    }
   }
 
   return (

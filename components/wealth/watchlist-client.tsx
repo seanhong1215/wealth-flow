@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { readAccountState, writeAccountState } from "@/lib/account-store";
+import { emptyAccountState, readAccountState, writeAccountState } from "@/lib/account-store";
 import { EmptyState, SummaryTile, Ticker } from "@/components/wealth/primitives";
 
 type WatchItem = {
@@ -20,7 +20,18 @@ export function WatchlistClient() {
   const [draft, setDraft] = useState({ symbol: "", name: "", market: "", assetClass: "" });
   const [message, setMessage] = useState("");
 
-  function addWatchItem() {
+  useEffect(() => {
+    function load() {
+      readAccountState()
+        .then((account) => setItems(account.watchlist))
+        .catch(() => setItems([]));
+    }
+    load();
+    window.addEventListener("wealthflow:account-updated", load);
+    return () => window.removeEventListener("wealthflow:account-updated", load);
+  }, []);
+
+  async function addWatchItem() {
     if (!draft.symbol || !draft.name) {
       setMessage("請輸入 ETF 代號與名稱。");
       return;
@@ -31,19 +42,22 @@ export function WatchlistClient() {
       market: draft.market || "-",
       assetClass: draft.assetClass || "-"
     };
-    setItems((current) => [...current.filter((item) => item.symbol !== next.symbol), next]);
+    const nextItems = [...items.filter((item) => item.symbol !== next.symbol), next];
+    const account = await readAccountState().catch(() => emptyAccountState);
+    await writeAccountState({ ...account, watchlist: nextItems });
+    setItems(nextItems);
     setSelected(next);
     setDraft({ symbol: "", name: "", market: "", assetClass: "" });
     setMessage(`${next.symbol} 已加入觀察清單。`);
   }
 
-  function addToPortfolio(item: WatchItem) {
-    const account = readAccountState();
+  async function addToPortfolio(item: WatchItem) {
+    const account = await readAccountState().catch(() => emptyAccountState);
     if (account.holdings.some((holding) => holding.etf === item.symbol)) {
       setMessage(`${item.symbol} 已在投資組合中。`);
       return;
     }
-    writeAccountState({
+    await writeAccountState({
       ...account,
       holdings: [...account.holdings, {
         etf: item.symbol,

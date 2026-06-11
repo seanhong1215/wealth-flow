@@ -23,6 +23,12 @@ export type AccountState = {
   onboardingComplete: boolean;
   profile: InvestmentProfile | null;
   holdings: AccountHolding[];
+  watchlist: Array<{
+    symbol: string;
+    name: string;
+    market: string;
+    assetClass: string;
+  }>;
   transactions: Array<{
     date: string;
     type: string;
@@ -31,37 +37,63 @@ export type AccountState = {
     price: string;
     status: string;
   }>;
+  settings: {
+    profile: Record<string, string>;
+    assumptions: Record<string, string>;
+    display: Record<string, string>;
+  };
 };
 
-export const accountStorageKey = "wealthflow:user:seanhong1215:v2";
+export const accountStorageKey = "wealthflow:legacy-cache";
 
 export const emptyAccountState: AccountState = {
-  userId: "seanhong1215",
+  userId: "",
   isAuthenticated: false,
   onboardingComplete: false,
   profile: null,
   holdings: [],
-  transactions: []
+  watchlist: [],
+  transactions: [],
+  settings: {
+    profile: {},
+    assumptions: {},
+    display: {}
+  }
 };
 
-export function readAccountState(): AccountState {
-  if (typeof window === "undefined") return emptyAccountState;
-  try {
-    const raw = window.localStorage.getItem(accountStorageKey);
-    if (!raw) return emptyAccountState;
-    return { ...emptyAccountState, ...JSON.parse(raw) };
-  } catch {
-    return emptyAccountState;
-  }
+export async function readAccountState(): Promise<AccountState> {
+  const response = await fetch("/api/account", { cache: "no-store" });
+  if (response.status === 401) return emptyAccountState;
+  if (!response.ok) throw new Error("account load failed");
+  return normalizeAccount(await response.json());
 }
 
-export function writeAccountState(next: AccountState) {
-  window.localStorage.setItem(accountStorageKey, JSON.stringify(next));
+export async function writeAccountState(next: AccountState): Promise<AccountState> {
+  const response = await fetch("/api/account", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(next)
+  });
+  if (!response.ok) throw new Error("account save failed");
+  const saved = normalizeAccount(await response.json());
   window.dispatchEvent(new CustomEvent("wealthflow:account-updated"));
+  return saved;
 }
 
-export function clearAccountState() {
-  window.localStorage.removeItem(accountStorageKey);
+export async function loginAccount(email: string): Promise<AccountState> {
+  const response = await fetch("/api/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email })
+  });
+  if (!response.ok) throw new Error("login failed");
+  const account = normalizeAccount(await response.json());
+  window.dispatchEvent(new CustomEvent("wealthflow:account-updated"));
+  return account;
+}
+
+export async function clearAccountState() {
+  await fetch("/api/logout", { method: "POST" });
   window.dispatchEvent(new CustomEvent("wealthflow:account-updated"));
 }
 
@@ -100,4 +132,19 @@ export function canEnterDashboard(account: AccountState) {
     isProfileValid(account.profile) &&
     account.holdings.some(isHoldingValid)
   );
+}
+
+function normalizeAccount(input: Partial<AccountState>): AccountState {
+  return {
+    ...emptyAccountState,
+    ...input,
+    holdings: Array.isArray(input.holdings) ? input.holdings : [],
+    watchlist: Array.isArray(input.watchlist) ? input.watchlist : [],
+    transactions: Array.isArray(input.transactions) ? input.transactions : [],
+    settings: {
+      profile: input.settings?.profile ?? {},
+      assumptions: input.settings?.assumptions ?? {},
+      display: input.settings?.display ?? {}
+    }
+  };
 }

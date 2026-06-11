@@ -58,11 +58,12 @@ async function collectPageSignals(page) {
 }
 
 async function runFlowChecks(page, result) {
+  const email = `wealthflow-qa-${Date.now()}@example.com`;
   await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
-  await page.evaluate(() => localStorage.removeItem("wealthflow:user:seanhong1215:v2"));
+  await page.evaluate(() => localStorage.clear());
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: "networkidle" });
   await page.waitForURL("**/login");
-  await page.getByLabel("Email").fill("seanhong1215@example.com");
+  await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "登入" }).click();
   await page.waitForURL("**/onboarding");
   await page.getByRole("button", { name: "前往儀表板" }).first().click();

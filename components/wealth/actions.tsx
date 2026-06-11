@@ -13,7 +13,7 @@ export function SearchBox() {
 
   useEffect(() => {
     function syncSymbols() {
-      setSymbols(readAccountState().holdings.map((holding) => holding.etf));
+      readAccountState().then((account) => setSymbols(account.holdings.map((holding) => holding.etf))).catch(() => setSymbols([]));
     }
     syncSymbols();
     window.addEventListener("wealthflow:account-updated", syncSymbols);
@@ -113,15 +113,15 @@ export function AddTransactionButton() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
-  function submit() {
+  async function submit() {
     const shares = Number(form.shares);
     const price = Number(form.price);
     if (!form.symbol.trim() || !form.date.trim() || !Number.isFinite(shares) || !Number.isFinite(price) || shares <= 0 || price <= 0) {
       setError("請輸入有效的代號、日期、股數與價格。");
       return;
     }
-    const current = readAccountState();
-    writeAccountState({
+    const current = await readAccountState();
+    await writeAccountState({
       ...current,
       transactions: [
         {

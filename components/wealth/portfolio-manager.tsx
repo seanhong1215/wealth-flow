@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { AccountHolding, readAccountState, writeAccountState } from "@/lib/account-store";
+import { AccountHolding, emptyAccountState, isHoldingValid, readAccountState, writeAccountState } from "@/lib/account-store";
 import { EmptyState, KpiCard, ProgressBar } from "./primitives";
 
 export function PortfolioManager() {
@@ -15,7 +15,7 @@ export function PortfolioManager() {
 
   useEffect(() => {
     function load() {
-      setRows(readAccountState().holdings);
+      readAccountState().then((account) => setRows(account.holdings)).catch(() => setRows([]));
     }
     load();
     window.addEventListener("wealthflow:account-updated", load);
@@ -32,49 +32,49 @@ export function PortfolioManager() {
     };
   }, [rows]);
 
-  function persist(nextRows: AccountHolding[]) {
-    const current = readAccountState();
-    writeAccountState({ ...current, holdings: nextRows });
+  async function persist(nextRows: AccountHolding[]) {
+    const current = await readAccountState().catch(() => emptyAccountState);
+    await writeAccountState({ ...current, holdings: nextRows });
     setRows(nextRows);
   }
 
   function addHolding() {
-    if (!draft.etf || !draft.name) {
-      setMessage("請先輸入 ETF 代號與名稱。");
+    const nextHolding = {
+      etf: draft.etf.toUpperCase(),
+      name: draft.name,
+      asset: "自訂 ETF",
+      shares: Number(draft.shares || 0),
+      avg: Number(draft.avg || 0),
+      current: 0,
+      target: Number(draft.target || 0),
+      currency: draft.currency
+    };
+    if (!isHoldingValid(nextHolding)) {
+      setMessage("請輸入有效的 ETF 代號、名稱、股數、平均成本與目標配置。");
       return;
     }
-    const symbol = draft.etf.toUpperCase();
     const nextRows = [
-      ...rows.filter((item) => item.etf !== symbol),
-      {
-        etf: symbol,
-        name: draft.name,
-        asset: "自訂 ETF",
-        shares: Number(draft.shares || 0),
-        avg: Number(draft.avg || 0),
-        current: 0,
-        target: Number(draft.target || 0),
-        currency: draft.currency
-      }
+      ...rows.filter((item) => item.etf !== nextHolding.etf),
+      nextHolding
     ];
-    persist(nextRows);
+    void persist(nextRows);
     setDraft({ etf: "", name: "", shares: "", avg: "", currency: "USD", target: "" });
     setMessage("持倉已新增到目前帳號。");
   }
 
   function editHolding(symbol: string) {
-    persist(rows.map((item) => item.etf === symbol ? { ...item, target: Math.min(item.target + 1, 80), shares: Number((item.shares + 1).toFixed(2)) } : item));
+    void persist(rows.map((item) => item.etf === symbol ? { ...item, target: Math.min(item.target + 1, 80), shares: Number((item.shares + 1).toFixed(2)) } : item));
     setEditing(symbol);
     setMessage(`${symbol} 已更新股數與目標配置。`);
   }
 
   function deleteHolding(symbol: string) {
-    persist(rows.filter((item) => item.etf !== symbol));
+    void persist(rows.filter((item) => item.etf !== symbol));
     setMessage(`${symbol} 已刪除。`);
   }
 
   function clearHoldings() {
-    persist([]);
+    void persist([]);
     setMessage("所有持倉已清空。");
   }
 

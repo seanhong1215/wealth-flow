@@ -16,16 +16,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const account = readAccountState();
-    if (!account.isAuthenticated) {
-      router.replace("/login");
-      return;
-    }
-    if (!canEnterDashboard(account) && pathname !== "/onboarding") {
-      router.replace("/onboarding");
-      return;
-    }
-    queueMicrotask(() => setReady(true));
+    let active = true;
+    readAccountState()
+      .then((account) => {
+        if (!active) return;
+        if (!account.isAuthenticated) {
+          router.replace("/login");
+          return;
+        }
+        if (!canEnterDashboard(account) && pathname !== "/onboarding") {
+          router.replace("/onboarding");
+          return;
+        }
+        queueMicrotask(() => setReady(true));
+      })
+      .catch(() => router.replace("/login"));
+    return () => {
+      active = false;
+    };
   }, [pathname, router]);
 
   if (!ready) {

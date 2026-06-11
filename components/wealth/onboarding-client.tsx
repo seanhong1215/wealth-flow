@@ -30,8 +30,11 @@ export function OnboardingClient() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const account = readAccountState();
-    if (!account.isAuthenticated) router.replace("/login");
+    readAccountState()
+      .then((account) => {
+        if (!account.isAuthenticated) router.replace("/login");
+      })
+      .catch(() => router.replace("/login"));
   }, [router]);
 
   const profilePayload = useMemo(() => ({
@@ -53,13 +56,13 @@ export function OnboardingClient() {
     currency: holding.currency
   }), [holding]);
 
-  function saveProfile() {
+  async function saveProfile() {
     if (!isProfileValid(profilePayload)) {
       setError("請確認年齡、退休年齡、每月投資金額與生活支出皆正確。");
       return false;
     }
-    const current = readAccountState();
-    writeAccountState({
+    const current = await readAccountState();
+    await writeAccountState({
       ...current,
       profile: profilePayload
     });
@@ -68,13 +71,13 @@ export function OnboardingClient() {
     return true;
   }
 
-  function addHolding() {
+  async function addHolding() {
     if (!isHoldingValid(holdingPayload)) {
       setError("請輸入有效的 ETF 代號、名稱、股數、成本與目標配置。");
       return;
     }
-    const current = readAccountState();
-    writeAccountState({
+    const current = await readAccountState();
+    await writeAccountState({
       ...current,
       holdings: [
         ...current.holdings.filter((item) => item.etf !== holding.etf.toUpperCase()),
@@ -86,10 +89,10 @@ export function OnboardingClient() {
     setMessage("ETF 持倉已加入目前帳號。");
   }
 
-  function continueToDashboard() {
-    if (!saveProfile()) return;
-    const next = { ...readAccountState(), profile: profilePayload, onboardingComplete: true };
-    writeAccountState(next);
+  async function continueToDashboard() {
+    if (!(await saveProfile())) return;
+    const next = { ...(await readAccountState()), profile: profilePayload, onboardingComplete: true };
+    await writeAccountState(next);
     if (!canEnterDashboard(next)) {
       setError("請先完成投資設定並加入至少一筆有效 ETF 持倉後再進入儀表板。");
       return;
