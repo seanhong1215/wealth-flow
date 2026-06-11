@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Plus, RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,6 +18,7 @@ export function SearchBox() {
       <div className="flex h-10 items-center gap-2 rounded-md border border-border bg-white px-3">
         <Search className="h-4 w-4 text-muted-foreground" />
         <input
+          aria-label="搜尋 ETF"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="搜尋 ETF"
@@ -65,6 +66,39 @@ export function SyncPricesButton({ compact = false }: { compact?: boolean }) {
 export function AddTransactionButton() {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const modalRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    closeRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setSaved(false);
+        return;
+      }
+      if (event.key !== "Tab" || !modalRef.current) return;
+      const focusable = modalRef.current.querySelectorAll<HTMLElement>(
+        "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      }
+      if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   function submit() {
     setSaved(true);
@@ -81,14 +115,14 @@ export function AddTransactionButton() {
         新增交易
       </Button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
-          <Card className="w-full max-w-2xl p-5 shadow-panel">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4" role="presentation">
+          <Card ref={modalRef} role="dialog" aria-modal="true" aria-labelledby="transaction-title" className="w-full max-w-2xl p-5 shadow-panel">
             <div className="mb-5 flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">新增交易</h3>
+                <h3 id="transaction-title" className="text-lg font-semibold">新增交易</h3>
                 <p className="text-sm text-muted-foreground">支援買入、賣出與股息紀錄。</p>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="關閉">
+              <button ref={closeRef} onClick={() => setOpen(false)} aria-label="關閉">
                 <X className="h-5 w-5 text-muted-foreground" />
               </button>
             </div>

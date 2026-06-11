@@ -1,9 +1,10 @@
-import { HTMLAttributes } from "react";
+import { forwardRef, HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+export const Card = forwardRef<HTMLElement, HTMLAttributes<HTMLElement>>(function Card({ className, ...props }, ref) {
   return (
     <section
+      ref={ref}
       className={cn(
         "rounded-lg border border-border bg-card shadow-sm",
         className
@@ -11,5 +12,4 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
       {...props}
     />
   );
-}
-
+});

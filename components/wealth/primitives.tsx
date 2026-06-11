@@ -102,8 +102,12 @@ export function StateCard({ type, title, message, action }: { type: "success" | 
   );
 }
 
-export function EmptyState() {
+export function EmptyState({ onAction }: { onAction?: () => void }) {
   function handleAdd() {
+    if (onAction) {
+      onAction();
+      return;
+    }
     alert("請前往投資組合頁新增第一檔 ETF。");
   }
 

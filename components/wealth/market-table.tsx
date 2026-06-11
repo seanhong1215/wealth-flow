@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SyncPricesButton } from "./actions";
 
-type MarketRow = {
+export type MarketRow = {
   symbol: string;
   dataSymbol: string;
   name: string;
@@ -21,7 +21,7 @@ type MarketRow = {
   note?: string;
 };
 
-export function MarketTable() {
+export function MarketTable({ onSelect }: { onSelect?: (row: MarketRow) => void }) {
   const [rows, setRows] = useState<MarketRow[]>([]);
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,7 @@ export function MarketTable() {
   }, []);
 
   useEffect(() => {
-    load();
+    void Promise.resolve().then(load);
     window.addEventListener("wealthflow:market-sync", load);
     return () => window.removeEventListener("wealthflow:market-sync", load);
   }, [load]);
@@ -63,6 +63,7 @@ export function MarketTable() {
       {error ? (
         <div className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700">
           無法讀取 Massive API：{error}
+          <Button className="ml-3 h-9 px-3" onClick={load}>重試</Button>
         </div>
       ) : null}
       <div className="overflow-x-auto">
@@ -77,9 +78,11 @@ export function MarketTable() {
           <tbody>
             {loading ? (
               <tr><td className="px-5 py-8 text-muted-foreground" colSpan={10}>正在同步 Massive.com 資料...</td></tr>
+            ) : rows.length === 0 ? (
+              <tr><td className="px-5 py-8 text-muted-foreground" colSpan={10}>尚未加入任何 ETF 觀察標的。</td></tr>
             ) : rows.map((item) => (
               <Fragment key={item.symbol}>
-                <tr className="border-t border-border">
+                <tr className="border-t border-border hover:bg-slate-50">
                   <td className="px-5 py-4 font-semibold">{item.symbol}</td>
                   <td className="px-5 py-4">
                     <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium">{item.dataSymbol}</span>
@@ -93,16 +96,12 @@ export function MarketTable() {
                   <td className="px-5 py-4">{item.assetClass}</td>
                   <td className="px-5 py-4">
                     <Button
-                      className="h-8 px-3"
+                      className="h-10 px-3"
                       onClick={() =>
-                        alert(
-                          item.source === "massive"
-                            ? `${item.symbol} 使用 ${item.dataSymbol} 已同步 Massive 真實價格。`
-                            : item.error ?? "尚未同步"
-                        )
+                        onSelect?.(item)
                       }
                     >
-                      {item.source === "massive" ? "已同步" : "查看原因"}
+                      {item.source === "massive" ? "查看詳情" : "查看原因"}
                     </Button>
                   </td>
                 </tr>
