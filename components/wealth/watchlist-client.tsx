@@ -1,86 +1,138 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { useState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { SummaryTile, Ticker } from "@/components/wealth/primitives";
-import { MarketRow, MarketTable } from "./market-table";
+import { readAccountState, writeAccountState } from "@/lib/account-store";
+import { EmptyState, SummaryTile, Ticker } from "@/components/wealth/primitives";
 
-const fallback: MarketRow = {
-  symbol: "CSPX",
-  dataSymbol: "IVV",
-  name: "iShares Core S&P 500 UCITS ETF",
-  market: "LSE proxy",
-  price: null,
-  changePercent: null,
-  ytdReturn: null,
-  expenseRatio: "0.07%",
-  assetClass: "美國股票",
-  currency: "USD",
-  source: "unavailable"
+type WatchItem = {
+  symbol: string;
+  name: string;
+  market: string;
+  assetClass: string;
 };
 
 export function WatchlistClient() {
-  const [selected, setSelected] = useState<MarketRow | null>(fallback);
-  const closeRef = useRef<HTMLButtonElement>(null);
+  const [items, setItems] = useState<WatchItem[]>([]);
+  const [selected, setSelected] = useState<WatchItem | null>(null);
+  const [draft, setDraft] = useState({ symbol: "", name: "", market: "", assetClass: "" });
+  const [message, setMessage] = useState("");
 
-  useEffect(() => {
-    if (!selected) return;
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setSelected(null);
+  function addWatchItem() {
+    if (!draft.symbol || !draft.name) {
+      setMessage("請輸入 ETF 代號與名稱。");
+      return;
     }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selected]);
+    const next = {
+      symbol: draft.symbol.toUpperCase(),
+      name: draft.name,
+      market: draft.market || "-",
+      assetClass: draft.assetClass || "-"
+    };
+    setItems((current) => [...current.filter((item) => item.symbol !== next.symbol), next]);
+    setSelected(next);
+    setDraft({ symbol: "", name: "", market: "", assetClass: "" });
+    setMessage(`${next.symbol} 已加入觀察清單。`);
+  }
+
+  function addToPortfolio(item: WatchItem) {
+    const account = readAccountState();
+    if (account.holdings.some((holding) => holding.etf === item.symbol)) {
+      setMessage(`${item.symbol} 已在投資組合中。`);
+      return;
+    }
+    writeAccountState({
+      ...account,
+      holdings: [...account.holdings, {
+        etf: item.symbol,
+        name: item.name,
+        asset: item.assetClass,
+        shares: 0,
+        avg: 0,
+        current: 0,
+        target: 0,
+        currency: "USD"
+      }]
+    });
+    setMessage(`${item.symbol} 已加入投資組合。`);
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-      <MarketTable onSelect={(row) => setSelected(row)} />
-      <Card className="hidden p-5 xl:block">
-        <DetailContent row={selected ?? fallback} onClose={() => setSelected(null)} closeRef={closeRef} />
-      </Card>
-      {selected ? (
-        <div className="fixed inset-0 z-50 bg-slate-950/30 p-4 xl:hidden" role="presentation">
-          <Card role="dialog" aria-modal="true" aria-labelledby="etf-detail-title" className="ml-auto h-full w-full max-w-sm overflow-y-auto p-5 shadow-panel">
-            <DetailContent row={selected} onClose={() => setSelected(null)} closeRef={closeRef} />
-          </Card>
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+          <div>
+            <h3 className="font-semibold">ETF 觀察清單</h3>
+            {message ? <p className="mt-1 text-sm text-success" role="status">{message}</p> : null}
+          </div>
+          <Button className="gap-2" variant="primary" onClick={addWatchItem}>
+            <Plus className="h-4 w-4" />
+            新增 ETF
+          </Button>
         </div>
-      ) : null}
+        <div className="grid gap-3 border-b border-border p-5 md:grid-cols-4">
+          <Field label="ETF 代號" value={draft.symbol} onChange={(value) => setDraft((current) => ({ ...current, symbol: value }))} />
+          <Field label="ETF 名稱" value={draft.name} onChange={(value) => setDraft((current) => ({ ...current, name: value }))} />
+          <Field label="市場" value={draft.market} onChange={(value) => setDraft((current) => ({ ...current, market: value }))} />
+          <Field label="資產類別" value={draft.assetClass} onChange={(value) => setDraft((current) => ({ ...current, assetClass: value }))} />
+        </div>
+        {items.length ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-sm">
+              <thead className="bg-slate-50 text-muted-foreground">
+                <tr>{["代號", "名稱", "市場", "資產類別", "操作"].map((head) => <th key={head} className="px-5 py-3 font-medium">{head}</th>)}</tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.symbol} className="border-t border-border">
+                    <td className="px-5 py-4 font-semibold">{item.symbol}</td>
+                    <td className="px-5 py-4">{item.name}</td>
+                    <td className="px-5 py-4">{item.market}</td>
+                    <td className="px-5 py-4">{item.assetClass}</td>
+                    <td className="px-5 py-4"><Button className="h-10 px-3" onClick={() => setSelected(item)}>查看詳情</Button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-5"><EmptyState onAction={() => setMessage("請先輸入 ETF 代號與名稱。")} /></div>
+        )}
+      </Card>
+      <Card className="p-5">
+        {selected ? (
+          <>
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">ETF 詳情</p>
+                <h3 className="text-xl font-semibold">{selected.symbol}</h3>
+                <p className="text-sm text-muted-foreground">{selected.name}</p>
+              </div>
+              <Ticker symbol={selected.symbol} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <SummaryTile label="市場" value={selected.market} />
+              <SummaryTile label="資產類別" value={selected.assetClass} />
+              <SummaryTile label="價格" value="-" />
+              <SummaryTile label="狀態" value="待更新" />
+            </div>
+            <Button className="mt-5 w-full" variant="primary" onClick={() => addToPortfolio(selected)}>加入投資組合</Button>
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">新增或選擇 ETF 後顯示詳情。</p>
+        )}
+      </Card>
     </div>
   );
 }
 
-function DetailContent({ row, onClose, closeRef }: { row: MarketRow; onClose: () => void; closeRef: React.RefObject<HTMLButtonElement | null> }) {
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <>
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <p className="text-sm text-muted-foreground">ETF Detail Drawer</p>
-          <h3 id="etf-detail-title" className="text-xl font-semibold">{row.symbol}</h3>
-          <p className="text-sm text-muted-foreground">{row.name}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Ticker symbol={row.symbol} />
-          <button ref={closeRef} className="xl:hidden" onClick={onClose} aria-label="關閉 ETF 詳情">
-            <X className="h-5 w-5 text-muted-foreground" />
-          </button>
-        </div>
-      </div>
-      <div className="flex h-28 items-end gap-1 rounded-lg border border-border bg-slate-50 p-3">
-        {[32, 44, 38, 51, 49, 63, 71, 69, 78, 85, 82, 92].map((value, index) => (
-          <div key={index} className="flex flex-1 items-end"><div className="w-full rounded-t-sm bg-primary" style={{ height: `${value}px` }} /></div>
-        ))}
-      </div>
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <SummaryTile label="價格" value={row.price === null ? "-" : `${row.currency === "TWD" ? "NT$" : "$"}${row.price.toFixed(2)}`} />
-        <SummaryTile label="1D 漲跌" value={row.changePercent === null ? "-" : `${row.changePercent.toFixed(2)}%`} />
-        <SummaryTile label="費用率" value={row.expenseRatio} />
-        <SummaryTile label="風險等級" value={row.assetClass.includes("債") ? "中低" : "中高"} />
-        <SummaryTile label="主要持股" value={row.assetClass.includes("債") ? "短天期債券" : "大型股票"} />
-        <SummaryTile label="資料來源" value={row.source === "massive" ? "Massive" : "待同步"} />
-      </div>
-      <Button className="mt-5 w-full" variant="primary" onClick={() => alert(`${row.symbol} 已加入投資組合。`)}>加入投資組合</Button>
-    </>
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+    </label>
   );
 }

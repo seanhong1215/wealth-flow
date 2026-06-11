@@ -4,35 +4,33 @@ import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EmptyState, LoadingState, StateCard } from "./primitives";
-import { paymentRecommendations } from "@/lib/wealth-data";
 
 const groups = [
   {
     title: "個人資料",
     fields: [
-      ["姓名", "Sean Hong"],
-      ["基準幣別", "USD"],
-      ["國家", "Taiwan"],
-      ["時區", "Asia/Taipei"]
+      ["姓名", ""],
+      ["基準幣別", ""],
+      ["國家", ""],
+      ["時區", ""]
     ]
   },
   {
     title: "投資假設",
     fields: [
-      ["預期報酬", "8%"],
-      ["通膨率", "2.5%"],
-      ["提領率", "4%"],
-      ["稅率", "10%"]
+      ["預期報酬", ""],
+      ["通膨率", ""],
+      ["提領率", ""],
+      ["稅率", ""]
     ]
   },
   {
     title: "顯示偏好",
     fields: [
-      ["貨幣格式", "USD"],
-      ["主題", "Light"],
-      ["圖表樣式", "Compact"],
-      ["資料同步", "Manual"]
+      ["貨幣格式", ""],
+      ["主題", ""],
+      ["圖表樣式", ""],
+      ["更新方式", ""]
     ]
   }
 ];
@@ -64,20 +62,6 @@ export function SettingsPanel() {
           設定已儲存。
         </div>
       ) : null}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <EmptyState />
-        <LoadingState />
-        <StateCard type="error" title="API 錯誤" message="無法同步市場價格，請檢查 MASSIVE_API_KEY 後重試。" action="再試一次" />
-        <StateCard type="success" title="正常狀態" message="Massive API 已設定，市場價格可同步。" action="查看儀表板" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {paymentRecommendations.map((item) => (
-          <Card key={item.title} className="p-5">
-            <h3 className="font-semibold">{item.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.text}</p>
-          </Card>
-        ))}
-      </div>
     </>
   );
 }

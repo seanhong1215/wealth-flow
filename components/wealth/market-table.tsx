@@ -23,7 +23,6 @@ export type MarketRow = {
 
 export function MarketTable({ onSelect }: { onSelect?: (row: MarketRow) => void }) {
   const [rows, setRows] = useState<MarketRow[]>([]);
-  const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -32,10 +31,9 @@ export function MarketTable({ onSelect }: { onSelect?: (row: MarketRow) => void 
         setLoading(true);
         setError("");
         const response = await fetch("/api/market");
-        if (!response.ok) throw new Error(`API 回應 ${response.status}`);
+        if (!response.ok) throw new Error("資料暫時無法更新");
         const payload = await response.json();
         setRows(payload.data);
-        setConfigured(payload.configured);
       } catch (event) {
         setError(event instanceof Error ? event.message : "讀取失敗");
       } finally {
@@ -52,17 +50,12 @@ export function MarketTable({ onSelect }: { onSelect?: (row: MarketRow) => void 
   return (
     <Card className="overflow-hidden">
       <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
-        <h3 className="font-semibold">Massive.com 真實資料觀察清單</h3>
+        <h3 className="font-semibold">ETF 觀察清單</h3>
         <SyncPricesButton />
       </div>
-      {!configured ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900">
-          尚未設定 `MASSIVE_API_KEY`。請建立 `.env.local` 並填入 Massive 免費 API key，重新啟動 dev server 後即可讀取真實資料。
-        </div>
-      ) : null}
       {error ? (
         <div className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700">
-          無法讀取 Massive API：{error}
+          目前無法更新價格。
           <Button className="ml-3 h-9 px-3" onClick={load}>重試</Button>
         </div>
       ) : null}
@@ -70,23 +63,20 @@ export function MarketTable({ onSelect }: { onSelect?: (row: MarketRow) => void 
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-slate-50 text-muted-foreground">
             <tr>
-              {["代號", "資料代理", "名稱", "市場", "價格", "1D 漲跌", "YTD 報酬", "費用率", "資產類別", "狀態"].map((head) => (
+              {["代號", "名稱", "市場", "價格", "1D 漲跌", "YTD 報酬", "費用率", "資產類別", "操作"].map((head) => (
                 <th key={head} className="px-5 py-3 font-medium">{head}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td className="px-5 py-8 text-muted-foreground" colSpan={10}>正在同步 Massive.com 資料...</td></tr>
+              <tr><td className="px-5 py-8 text-muted-foreground" colSpan={9}>資料更新中...</td></tr>
             ) : rows.length === 0 ? (
-              <tr><td className="px-5 py-8 text-muted-foreground" colSpan={10}>尚未加入任何 ETF 觀察標的。</td></tr>
+              <tr><td className="px-5 py-8 text-muted-foreground" colSpan={9}>尚未加入任何 ETF 觀察標的。</td></tr>
             ) : rows.map((item) => (
               <Fragment key={item.symbol}>
                 <tr className="border-t border-border hover:bg-slate-50">
                   <td className="px-5 py-4 font-semibold">{item.symbol}</td>
-                  <td className="px-5 py-4">
-                    <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium">{item.dataSymbol}</span>
-                  </td>
                   <td className="px-5 py-4">{item.name}</td>
                   <td className="px-5 py-4">{item.market}</td>
                   <td className="px-5 py-4 font-medium">{formatPrice(item)}</td>
@@ -101,15 +91,10 @@ export function MarketTable({ onSelect }: { onSelect?: (row: MarketRow) => void 
                         onSelect?.(item)
                       }
                     >
-                      {item.source === "massive" ? "查看詳情" : "查看原因"}
+                      查看詳情
                     </Button>
                   </td>
                 </tr>
-                {item.note ? (
-                  <tr className="border-t border-border bg-slate-50">
-                    <td className="px-5 py-2 text-xs text-muted-foreground" colSpan={10}>{item.note}</td>
-                  </tr>
-                ) : null}
               </Fragment>
             ))}
           </tbody>

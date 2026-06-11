@@ -16,10 +16,10 @@ type DcaInput = {
 };
 
 const defaults: DcaInput = {
-  initial: 8000,
-  monthly: 500,
-  annualReturn: 8,
-  years: 25,
+  initial: 0,
+  monthly: 0,
+  annualReturn: 0,
+  years: 0,
   frequency: "monthly",
   currency: "USD"
 };
@@ -72,14 +72,14 @@ export function DcaSimulator() {
               </select>
             </label>
           </div>
-          <Button className="mt-5 w-full" variant="primary" onClick={() => setInput(defaults)}>還原預設值</Button>
+          <Button className="mt-5 w-full" variant="primary" onClick={() => setInput(defaults)}>清空條件</Button>
         </Card>
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <KpiCard label="最終資產" value={formatMoney(last.value, input.currency)} trend={`+${input.annualReturn}% 年化`} note="含複利效果" />
-            <KpiCard label="總投入" value={formatMoney(totalContribution, input.currency)} trend={`${input.years} 年`} note="本金合計" />
+            <KpiCard label="最終資產" value={formatMoney(last.value, input.currency)} trend={input.years ? `+${input.annualReturn}% 年化` : "未設定"} note="輸入條件後開始試算" />
+            <KpiCard label="總投入" value={formatMoney(totalContribution, input.currency)} trend={input.years ? `${input.years} 年` : "未設定"} note="本金合計" />
             <KpiCard label="預估收益" value={formatMoney(gain, input.currency)} trend={`+${Math.round((gain / Math.max(totalContribution, 1)) * 100)}%`} note="稅費前估算" />
-            <KpiCard label="年化報酬" value={`${input.annualReturn.toFixed(1)}%`} trend="目前情境" note="由輸入條件即時計算" />
+            <KpiCard label="年化報酬" value={`${input.annualReturn.toFixed(1)}%`} trend="目前情境" note="輸入後即時計算" />
           </div>
           <Card className="p-5">
             <div className="mb-5 flex items-center justify-between">
@@ -122,7 +122,7 @@ function NumberField({ label, value, error, onChange }: { label: string; value: 
       <span className="mb-1 block text-sm font-medium">{label}</span>
       <input
         type="number"
-        value={Number.isNaN(value) ? "" : value}
+        value={Number.isNaN(value) || value === 0 ? "" : value}
         onChange={(event) => onChange(event.target.value)}
         className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
         aria-invalid={Boolean(error)}
@@ -137,7 +137,7 @@ function validate(input: DcaInput) {
     initial: input.initial < 0 || Number.isNaN(input.initial) ? "初始投入不可為負數或空白" : "",
     monthly: input.monthly < 0 || Number.isNaN(input.monthly) ? "每月投入不可為負數或空白" : "",
     annualReturn: input.annualReturn < -50 || input.annualReturn > 50 || Number.isNaN(input.annualReturn) ? "年化報酬需介於 -50% 到 50%" : "",
-    years: input.years <= 0 || input.years > 80 || Number.isNaN(input.years) ? "期間需介於 1 到 80 年" : ""
+    years: input.years < 0 || input.years > 80 || Number.isNaN(input.years) ? "期間需介於 1 到 80 年" : ""
   };
 }
 

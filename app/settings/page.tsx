@@ -5,7 +5,7 @@ import { PageHeading } from "@/components/wealth/primitives";
 export default function SettingsPage() {
   return (
     <AppShell>
-      <PageHeading eyebrow="設定" title="個人資料、API 與金流策略" description="管理投資假設、顯示偏好、Massive API key 設定方式，以及金流是否適合放進產品。" />
+      <PageHeading eyebrow="設定" title="個人資料與偏好設定" description="管理個人資料、投資假設與顯示偏好。" />
       <SettingsPanel />
     </AppShell>
   );

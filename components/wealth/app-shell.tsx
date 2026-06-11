@@ -2,13 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, CircleDollarSign, Clock3, Settings, ShieldCheck } from "lucide-react";
+import { CircleDollarSign, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { mobileRoutes, routes } from "@/lib/wealth-data";
 import { cn } from "@/lib/utils";
 import { SearchBox } from "./actions";
-import { ProgressBar } from "./primitives";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -60,34 +58,6 @@ function Sidebar() {
           );
         })}
       </nav>
-      <Card className="mt-8 p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-          <ShieldCheck className="h-4 w-4 text-success" />
-          資料安全
-        </div>
-        <p className="text-xs leading-5 text-muted-foreground">
-          Massive API key 僅保留在伺服器環境變數，不會傳到瀏覽器。
-        </p>
-      </Card>
-      <Card className="mt-4 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">本月進度</p>
-        <div className="mt-3 space-y-3">
-          <div>
-            <div className="mb-1 flex justify-between text-xs">
-              <span>定期定額</span>
-              <span>$500 / $500</span>
-            </div>
-            <ProgressBar value={100} />
-          </div>
-          <div>
-            <div className="mb-1 flex justify-between text-xs">
-              <span>FIRE 進度</span>
-              <span>42%</span>
-            </div>
-            <ProgressBar value={42} subtle />
-          </div>
-        </div>
-      </Card>
     </aside>
   );
 }
@@ -103,17 +73,10 @@ function Topbar() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-sm text-muted-foreground xl:flex">
-            <Clock3 className="h-4 w-4 text-primary" />
-            Massive API 伺服器代理
-          </div>
           <SearchBox />
-          <Button className="h-10 w-10 px-0" aria-label="通知">
-            <Bell className="h-4 w-4" />
-          </Button>
-          <Button className="h-10 w-10 px-0" aria-label="偏好設定">
+          <Link href="/settings" className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-white text-foreground hover:bg-slate-50" aria-label="偏好設定">
             <Settings className="h-4 w-4" />
-          </Button>
+          </Link>
         </div>
       </div>
     </header>

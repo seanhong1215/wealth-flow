@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Loader2, Plus, WalletCards } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -59,16 +59,11 @@ export function SummaryTile({ label, value, danger = false }: { label: string; v
 }
 
 export function TableHeader({ title, action }: { title: string; action?: string }) {
-  function handleAction() {
-    alert(`${action} 功能已觸發。`);
-  }
-
   return (
     <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
       <h3 className="font-semibold">{title}</h3>
       {action ? (
-        <Button className="gap-2" variant="primary" onClick={handleAction}>
-          <Plus className="h-4 w-4" />
+        <Button className="gap-2" variant="primary" onClick={() => window.location.assign("/portfolio")}>
           {action}
         </Button>
       ) : null}
@@ -86,9 +81,6 @@ export function Ticker({ symbol }: { symbol: string }) {
 
 export function StateCard({ type, title, message, action }: { type: "success" | "error"; title: string; message: string; action: string }) {
   const Icon = type === "success" ? CheckCircle2 : AlertTriangle;
-  function handleAction() {
-    alert(`${action} 功能已觸發。`);
-  }
 
   return (
     <Card className="p-5">
@@ -97,7 +89,7 @@ export function StateCard({ type, title, message, action }: { type: "success" | 
       </div>
       <h3 className="font-semibold">{title}</h3>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{message}</p>
-      <Button className="mt-5" onClick={handleAction}>{action}</Button>
+      <Button className="mt-5" onClick={() => window.location.assign("/dashboard")}>{action}</Button>
     </Card>
   );
 }
@@ -108,7 +100,7 @@ export function EmptyState({ onAction }: { onAction?: () => void }) {
       onAction();
       return;
     }
-    alert("請前往投資組合頁新增第一檔 ETF。");
+    window.location.assign("/portfolio");
   }
 
   return (

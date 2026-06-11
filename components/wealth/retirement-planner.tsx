@@ -18,14 +18,14 @@ type RetirementInput = {
 };
 
 const defaults: RetirementInput = {
-  currentAge: 35,
-  retirementAge: 60,
-  monthlyExpense: 2800,
-  inflationRate: 2.5,
-  withdrawalRate: 4,
-  currentPortfolio: 128450,
-  currentMonthlyInvestment: 500,
-  expectedReturn: 8
+  currentAge: 0,
+  retirementAge: 0,
+  monthlyExpense: 0,
+  inflationRate: 0,
+  withdrawalRate: 0,
+  currentPortfolio: 0,
+  currentMonthlyInvestment: 0,
+  expectedReturn: 0
 };
 
 export function RetirementPlanner() {
@@ -50,7 +50,7 @@ export function RetirementPlanner() {
           <NumberField label="目前投資組合" value={input.currentPortfolio} error={errors.currentPortfolio} onChange={(value) => setNumber("currentPortfolio", value)} />
           <NumberField label="目前月投入" value={input.currentMonthlyInvestment} error={errors.currentMonthlyInvestment} onChange={(value) => setNumber("currentMonthlyInvestment", value)} />
         </div>
-        <Button className="mt-5 w-full" onClick={() => setInput(defaults)}>還原預設值</Button>
+        <Button className="mt-5 w-full" onClick={() => setInput(defaults)}>清空條件</Button>
       </Card>
       <div className="grid gap-4">
         <Card className="p-5">
@@ -66,9 +66,9 @@ export function RetirementPlanner() {
           <p className="mt-2 text-sm text-muted-foreground">目前達成率 {result.progress.toFixed(1)}%</p>
         </Card>
         <div className="grid gap-4 md:grid-cols-3">
-          <Card className="p-5 font-semibold">Age {input.currentAge} 目前 {formatMoney(input.currentPortfolio)}</Card>
-          <Card className="p-5 font-semibold">Age {Math.round((input.currentAge + input.retirementAge) / 2)} 中繼點 {formatMoney(result.midpointTarget)}</Card>
-          <Card className="p-5 font-semibold">Age {input.retirementAge} 退休目標 {formatMoney(result.fireNumber)}</Card>
+          <Card className="p-5 font-semibold">目前 {input.currentAge ? `Age ${input.currentAge}` : "尚未設定"} {formatMoney(input.currentPortfolio)}</Card>
+          <Card className="p-5 font-semibold">中繼點 {result.midpointTarget ? formatMoney(result.midpointTarget) : "尚未設定"}</Card>
+          <Card className="p-5 font-semibold">退休目標 {input.retirementAge ? `Age ${input.retirementAge}` : "尚未設定"} {formatMoney(result.fireNumber)}</Card>
         </div>
         <Card className="p-5">
           <h3 className="mb-4 font-semibold">缺口分析</h3>
@@ -93,7 +93,7 @@ function NumberField({ label, value, error, onChange }: { label: string; value: 
       <span className="mb-1 block text-sm font-medium">{label}</span>
       <input
         type="number"
-        value={Number.isNaN(value) ? "" : value}
+        value={Number.isNaN(value) || value === 0 ? "" : value}
         onChange={(event) => onChange(event.target.value)}
         className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
         aria-invalid={Boolean(error)}
@@ -105,17 +105,20 @@ function NumberField({ label, value, error, onChange }: { label: string; value: 
 
 function validate(input: RetirementInput) {
   return {
-    currentAge: input.currentAge <= 0 || Number.isNaN(input.currentAge) ? "目前年齡需大於 0" : "",
-    retirementAge: input.retirementAge <= input.currentAge || Number.isNaN(input.retirementAge) ? "退休年齡需大於目前年齡" : "",
-    monthlyExpense: input.monthlyExpense <= 0 || Number.isNaN(input.monthlyExpense) ? "每月支出需大於 0" : "",
+    currentAge: input.currentAge < 0 || Number.isNaN(input.currentAge) ? "目前年齡需大於 0" : "",
+    retirementAge: input.retirementAge !== 0 && input.retirementAge <= input.currentAge ? "退休年齡需大於目前年齡" : "",
+    monthlyExpense: input.monthlyExpense < 0 || Number.isNaN(input.monthlyExpense) ? "每月支出需大於 0" : "",
     inflationRate: input.inflationRate < 0 || input.inflationRate > 20 || Number.isNaN(input.inflationRate) ? "通膨率需介於 0 到 20%" : "",
-    withdrawalRate: input.withdrawalRate <= 0 || input.withdrawalRate > 10 || Number.isNaN(input.withdrawalRate) ? "提領率需介於 0 到 10%" : "",
+    withdrawalRate: input.withdrawalRate < 0 || input.withdrawalRate > 10 || Number.isNaN(input.withdrawalRate) ? "提領率需介於 0 到 10%" : "",
     currentPortfolio: input.currentPortfolio < 0 || Number.isNaN(input.currentPortfolio) ? "目前資產不可為負數" : "",
     currentMonthlyInvestment: input.currentMonthlyInvestment < 0 || Number.isNaN(input.currentMonthlyInvestment) ? "月投入不可為負數" : ""
   };
 }
 
 function calculate(input: RetirementInput) {
+  if (!input.currentAge || !input.retirementAge || !input.monthlyExpense || !input.withdrawalRate) {
+    return { fireNumber: 0, progress: 0, midpointTarget: 0, requiredMonthly: 0 };
+  }
   const years = Math.max(input.retirementAge - input.currentAge, 1);
   const inflationAdjustedMonthlyExpense = input.monthlyExpense * (1 + input.inflationRate / 100) ** years;
   const fireNumber = (inflationAdjustedMonthlyExpense * 12) / Math.max(input.withdrawalRate / 100, 0.001);

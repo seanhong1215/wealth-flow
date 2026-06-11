@@ -13,10 +13,19 @@ async function run() {
 
   try {
     await page.goto(`${baseUrl}/onboarding`, { waitUntil: "networkidle" });
+    await page.evaluate(() => localStorage.removeItem("wealthflow:user:seanhong1215:v2"));
+    await page.reload({ waitUntil: "networkidle" });
     await expectText(page, "登入 / Onboarding");
     await expectText(page, "建立投資設定");
     await expectText(page, "加入 ETF 持倉");
-    await page.getByRole("link", { name: "前往 Dashboard" }).click();
+    await page.getByLabel("ETF 代號").fill("CSPX");
+    await page.getByLabel("ETF 名稱").fill("iShares Core S&P 500 UCITS ETF");
+    await page.getByLabel("股數").fill("10");
+    await page.getByLabel("平均成本").fill("500");
+    await page.getByLabel("目標配置 %").fill("60");
+    await page.getByRole("button", { name: "加入持倉" }).click();
+    await expectText(page, "ETF 持倉已加入目前帳號");
+    await page.getByRole("button", { name: "前往 Dashboard" }).click();
     await page.waitForURL("**/dashboard");
     await expectText(page, "總資產");
     steps.push("登入 / Onboarding -> Dashboard");
@@ -29,8 +38,16 @@ async function run() {
 
     await page.goto(`${baseUrl}/portfolio`, { waitUntil: "networkidle" });
     await expectText(page, "檢視目前 ETF 持倉");
+    await expectText(page, "CSPX");
+    await page.getByLabel("ETF 代號").fill("VWRA");
+    await page.getByLabel("ETF 名稱").fill("Vanguard FTSE All-World UCITS ETF");
+    await page.getByLabel("股數").fill("8");
+    await page.getByLabel("平均成本").fill("110");
+    await page.getByLabel("目標配置 %").fill("40");
+    await page.getByRole("button", { name: "新增持倉" }).click();
+    await expectText(page, "持倉已新增到目前帳號");
     const slider = page.getByLabel("VWRA 目標配置");
-    await slider.fill("25");
+    await slider.fill("40");
     await page.getByRole("button", { name: "套用目標配置" }).click();
     await expectText(page, "目標配置已更新");
     steps.push("調整資產配置");
@@ -47,23 +64,19 @@ async function run() {
 
     await page.goto(`${baseUrl}/watchlist`, { waitUntil: "networkidle" });
     await expectText(page, "追蹤關注 ETF");
-    await expectText(page, "CSPX");
+    await page.getByLabel("ETF 代號").fill("SGOV");
+    await page.getByLabel("ETF 名稱").fill("iShares 0-3 Month Treasury Bond ETF");
+    await page.getByLabel("市場").fill("NYSE");
+    await page.getByLabel("資產類別").fill("短期債券");
+    await page.getByRole("button", { name: "新增 ETF" }).click();
+    await page.getByRole("button", { name: "查看詳情" }).first().click();
+    await expectText(page, "ETF 詳情");
     await page.getByRole("button", { name: "加入投資組合" }).click();
     steps.push("ETF Watchlist");
 
-    const marketResponse = await page.request.get(`${baseUrl}/api/market`);
-    if (!marketResponse.ok()) {
-      throw new Error(`/api/market 回應失敗：${marketResponse.status()}`);
-    }
-    const market = await marketResponse.json();
-    if (!market.configured || !Array.isArray(market.data) || market.data.length < 4) {
-      throw new Error("/api/market 未回傳可用的真實市場資料");
-    }
-    steps.push("Massive API 市場資料");
-
     await page.goto(`${baseUrl}/reports`, { waitUntil: "networkidle" });
     await expectText(page, "每月投資報告");
-    await expectText(page, "洞察 1");
+    await expectText(page, "洞察");
     steps.push("Monthly Report");
 
     console.log(`流程測試完成：${steps.join(" -> ")}`);

@@ -1,81 +1,90 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { allocations, holdings as seedHoldings } from "@/lib/wealth-data";
+import { AccountHolding, readAccountState, writeAccountState } from "@/lib/account-store";
 import { EmptyState, KpiCard, ProgressBar } from "./primitives";
 
-type Holding = {
-  etf: string;
-  name: string;
-  asset: string;
-  shares: number;
-  avg: number;
-  current: number;
-  target: number;
-  currency: string;
-};
-
-const draftHolding: Holding = {
-  etf: "AGGU",
-  name: "iShares Global Aggregate Bond UCITS ETF",
-  asset: "全球債券",
-  shares: 25,
-  avg: 5.1,
-  current: 3,
-  target: 5,
-  currency: "USD"
-};
-
 export function PortfolioManager() {
-  const [rows, setRows] = useState<Holding[]>(seedHoldings);
+  const [rows, setRows] = useState<AccountHolding[]>([]);
   const [editing, setEditing] = useState("");
   const [message, setMessage] = useState("");
+  const [draft, setDraft] = useState({ etf: "", name: "", shares: "", avg: "", currency: "USD", target: "" });
+
+  useEffect(() => {
+    function load() {
+      setRows(readAccountState().holdings);
+    }
+    load();
+    window.addEventListener("wealthflow:account-updated", load);
+    return () => window.removeEventListener("wealthflow:account-updated", load);
+  }, []);
+
   const summary = useMemo(() => {
     const totalCost = rows.reduce((sum, item) => sum + item.shares * item.avg, 0);
     return {
-      marketValue: totalCost * 1.148,
+      marketValue: totalCost,
       totalCost,
-      gain: totalCost * 0.148,
-      dividend: totalCost * 0.027
+      gain: 0,
+      dividend: 0
     };
   }, [rows]);
 
+  function persist(nextRows: AccountHolding[]) {
+    const current = readAccountState();
+    writeAccountState({ ...current, holdings: nextRows });
+    setRows(nextRows);
+  }
+
   function addHolding() {
-    setRows((current) => current.some((item) => item.etf === draftHolding.etf) ? current : [...current, draftHolding]);
-    setMessage("持倉已新增。");
+    if (!draft.etf || !draft.name) {
+      setMessage("請先輸入 ETF 代號與名稱。");
+      return;
+    }
+    const symbol = draft.etf.toUpperCase();
+    const nextRows = [
+      ...rows.filter((item) => item.etf !== symbol),
+      {
+        etf: symbol,
+        name: draft.name,
+        asset: "自訂 ETF",
+        shares: Number(draft.shares || 0),
+        avg: Number(draft.avg || 0),
+        current: 0,
+        target: Number(draft.target || 0),
+        currency: draft.currency
+      }
+    ];
+    persist(nextRows);
+    setDraft({ etf: "", name: "", shares: "", avg: "", currency: "USD", target: "" });
+    setMessage("持倉已新增到目前帳號。");
   }
 
   function editHolding(symbol: string) {
-    setRows((current) => current.map((item) => item.etf === symbol ? { ...item, target: Math.min(item.target + 1, 80), shares: Number((item.shares + 1).toFixed(2)) } : item));
+    persist(rows.map((item) => item.etf === symbol ? { ...item, target: Math.min(item.target + 1, 80), shares: Number((item.shares + 1).toFixed(2)) } : item));
     setEditing(symbol);
     setMessage(`${symbol} 已更新股數與目標配置。`);
   }
 
   function deleteHolding(symbol: string) {
-    setRows((current) => current.filter((item) => item.etf !== symbol));
+    persist(rows.filter((item) => item.etf !== symbol));
     setMessage(`${symbol} 已刪除。`);
   }
 
-  function resetHoldings() {
-    setRows(seedHoldings);
-    setMessage("已還原範例持倉。");
-  }
-
   function clearHoldings() {
-    setRows([]);
+    persist([]);
     setMessage("所有持倉已清空。");
   }
 
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="市場價值" value={formatCurrency(summary.marketValue)} trend="+8.4%" note="依 Massive 價格同步後估算" />
-        <KpiCard label="總成本" value={formatCurrency(summary.totalCost)} trend="+$5,000" note="今年新增投入" />
-        <KpiCard label="未實現損益" value={formatCurrency(summary.gain)} trend="+14.8%" note="未含股息稅費" />
-        <KpiCard label="預估年度股息" value={formatCurrency(summary.dividend)} trend="2.7%" note="以近 12 個月殖利率估算" />
+        <KpiCard label="市場價值" value={formatCurrency(summary.marketValue)} trend={rows.length ? "已建立" : "空資料"} note="依目前輸入資料計算" />
+        <KpiCard label="總成本" value={formatCurrency(summary.totalCost)} trend={rows.length ? `${rows.length} 檔` : "0 檔"} note="目前帳號持倉成本" />
+        <KpiCard label="未實現損益" value={formatCurrency(summary.gain)} trend="待更新" note="尚未輸入最新價格" />
+        <KpiCard label="預估年度股息" value={formatCurrency(summary.dividend)} trend="待更新" note="尚未輸入股息資料" />
       </div>
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -89,8 +98,15 @@ export function PortfolioManager() {
               新增持倉
             </Button>
             <Button onClick={clearHoldings}>清空持倉</Button>
-            <Button onClick={resetHoldings}>還原範例</Button>
           </div>
+        </div>
+        <div className="grid gap-3 border-b border-border p-5 md:grid-cols-3 xl:grid-cols-6">
+          <InlineField label="ETF 代號" value={draft.etf} onChange={(value) => setDraft((current) => ({ ...current, etf: value }))} />
+          <InlineField label="ETF 名稱" value={draft.name} onChange={(value) => setDraft((current) => ({ ...current, name: value }))} />
+          <InlineField label="股數" value={draft.shares} onChange={(value) => setDraft((current) => ({ ...current, shares: value }))} />
+          <InlineField label="平均成本" value={draft.avg} onChange={(value) => setDraft((current) => ({ ...current, avg: value }))} />
+          <InlineField label="幣別" value={draft.currency} onChange={(value) => setDraft((current) => ({ ...current, currency: value }))} />
+          <InlineField label="目標配置 %" value={draft.target} onChange={(value) => setDraft((current) => ({ ...current, target: value }))} />
         </div>
         {rows.length ? (
           <div className="overflow-x-auto">
@@ -105,9 +121,9 @@ export function PortfolioManager() {
                     <td className="px-5 py-4">{item.asset}</td>
                     <td className="px-5 py-4">{item.shares}</td>
                     <td className="px-5 py-4">{item.currency === "TWD" ? "NT$" : "$"}{item.avg}</td>
-                    <td className="px-5 py-4 text-muted-foreground">由 API 同步</td>
-                    <td className="px-5 py-4 font-medium">{formatCurrency(item.shares * item.avg * 1.148)}</td>
-                    <td className="px-5 py-4 font-semibold text-success">{formatCurrency(item.shares * item.avg * 0.148)}</td>
+                    <td className="px-5 py-4 text-muted-foreground">待更新</td>
+                    <td className="px-5 py-4 font-medium">{formatCurrency(item.shares * item.avg)}</td>
+                    <td className="px-5 py-4 font-semibold text-muted-foreground">{formatCurrency(0)}</td>
                     <td className="px-5 py-4">{item.current}%</td>
                     <td className="px-5 py-4">{item.target}%</td>
                     <td className="px-5 py-4">
@@ -139,12 +155,14 @@ export function PortfolioManager() {
   );
 }
 
-function AllocationPlanner({ rows, onMessage }: { rows: Holding[]; onMessage: (message: string) => void }) {
-  const [targets, setTargets] = useState(() => allocations.map((item) => item.value));
-  const total = useMemo(() => targets.reduce((sum, value) => sum + value, 0), [targets]);
+function AllocationPlanner({ rows, onMessage }: { rows: AccountHolding[]; onMessage: (message: string) => void }) {
+  const [targets, setTargets] = useState<Record<string, number>>({});
+  const visibleRows = rows;
 
-  function updateTarget(index: number, value: number) {
-    setTargets((current) => current.map((target, targetIndex) => targetIndex === index ? value : target));
+  const targetTotal = useMemo(() => visibleRows.reduce((sum, item) => sum + (targets[item.etf] ?? item.target), 0), [targets, visibleRows]);
+
+  function updateTarget(symbol: string, value: number) {
+    setTargets((current) => ({ ...current, [symbol]: value }));
   }
 
   return (
@@ -152,50 +170,71 @@ function AllocationPlanner({ rows, onMessage }: { rows: Holding[]; onMessage: (m
       <Card className="p-5">
         <h3 className="font-semibold">配置比較與目標調整</h3>
         <p className="mt-1 text-sm text-muted-foreground">拖曳各 ETF 目標比例後套用，總和需維持 100%。</p>
-        <div className="mt-5 space-y-5">
-          {allocations.map((item, index) => {
-            const row = rows.find((holding) => holding.etf === item.symbol);
-            return (
-              <div key={item.symbol}>
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="font-medium">{item.symbol} · {item.label}</span>
-                  <span className="text-muted-foreground">目前 {row?.current ?? 0}% / 目標 {targets[index]}%</span>
-                </div>
-                <div className="grid gap-2 md:grid-cols-[1fr_160px] md:items-center">
-                  <div className="grid grid-cols-2 gap-2">
-                    <ProgressBar value={row?.current ?? 0} />
-                    <ProgressBar value={targets[index]} subtle />
+        {visibleRows.length ? (
+          <>
+            <div className="mt-5 space-y-5">
+              {visibleRows.map((item) => {
+                const target = targets[item.etf] ?? item.target;
+                return (
+                  <div key={item.etf}>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-medium">{item.etf} · {item.name}</span>
+                      <span className="text-muted-foreground">目前 {item.current}% / 目標 {target}%</span>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-[1fr_160px] md:items-center">
+                      <div className="grid grid-cols-2 gap-2">
+                        <ProgressBar value={item.current} />
+                        <ProgressBar value={target} subtle />
+                      </div>
+                      <input
+                        aria-label={`${item.etf} 目標配置`}
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={target}
+                        onChange={(event) => updateTarget(item.etf, Number(event.target.value))}
+                        className="h-11 w-full accent-blue-600"
+                      />
+                    </div>
                   </div>
-                  <input
-                    aria-label={`${item.symbol} 目標配置`}
-                    type="range"
-                    min="0"
-                    max="80"
-                    value={targets[index]}
-                    onChange={(event) => updateTarget(index, Number(event.target.value))}
-                    className="h-11 w-full accent-blue-600"
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-slate-50 p-3 text-sm">
-          <span className={total === 100 ? "font-medium text-success" : "font-medium text-danger"}>目標配置總和：{total}%</span>
-          <Button variant="primary" disabled={total !== 100} onClick={() => onMessage("目標配置已更新。")}>
-            套用目標配置
-          </Button>
-        </div>
+                );
+              })}
+            </div>
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-slate-50 p-3 text-sm">
+              <span className={targetTotal === 100 ? "font-medium text-success" : "font-medium text-danger"}>目標配置總和：{targetTotal}%</span>
+              <Button variant="primary" disabled={targetTotal !== 100} onClick={() => onMessage("目標配置已更新。")}>
+                套用目標配置
+              </Button>
+            </div>
+          </>
+        ) : (
+          <p className="mt-5 rounded-md border border-border bg-slate-50 p-4 text-sm text-muted-foreground">新增持倉後即可設定目標配置。</p>
+        )}
       </Card>
       <Card className="p-5">
         <h3 className="mb-4 font-semibold">再平衡建議</h3>
-        <div className="space-y-3 text-sm">
-          <p className="rounded-lg border border-border bg-amber-50 p-3">CSPX 超配 5%，下次投入可暫緩增加。</p>
-          <p className="rounded-lg border border-border bg-emerald-50 p-3">VWRA 低配 3%，建議下一筆定期定額優先補足。</p>
-          <p className="rounded-lg border border-border bg-slate-50 p-3">SGOV 落在目標區間內，維持現有配置。</p>
-        </div>
+        {visibleRows.length ? (
+          <div className="space-y-3 text-sm">
+            {visibleRows.map((item) => (
+              <p key={item.etf} className="rounded-lg border border-border bg-slate-50 p-3">
+                {item.etf} 目前配置 {item.current}%，目標配置 {targets[item.etf] ?? item.target}%。
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-lg border border-border bg-slate-50 p-3 text-sm text-muted-foreground">新增持倉後會顯示再平衡建議。</p>
+        )}
       </Card>
     </div>
+  );
+}
+
+function InlineField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-muted-foreground">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="h-10 w-full rounded-md border border-border px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" />
+    </label>
   );
 }
 

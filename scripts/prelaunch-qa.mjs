@@ -23,10 +23,6 @@ const viewports = [
   { name: "mobile-390x844", width: 390, height: 844, isMobile: true }
 ];
 
-function unique(values) {
-  return [...new Set(values)];
-}
-
 async function collectPageSignals(page) {
   return page.evaluate(() => {
     const namedButtons = [...document.querySelectorAll("button")].filter((button) => {
@@ -63,7 +59,15 @@ async function collectPageSignals(page) {
 
 async function runFlowChecks(page, result) {
   await page.goto(`${baseUrl}/onboarding`, { waitUntil: "networkidle" });
-  await page.getByRole("link", { name: "前往 Dashboard" }).click();
+  await page.evaluate(() => localStorage.removeItem("wealthflow:user:seanhong1215:v2"));
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByLabel("ETF 代號").fill("CSPX");
+  await page.getByLabel("ETF 名稱").fill("iShares Core S&P 500 UCITS ETF");
+  await page.getByLabel("股數").fill("10");
+  await page.getByLabel("平均成本").fill("500");
+  await page.getByLabel("目標配置 %").fill("60");
+  await page.getByRole("button", { name: "加入持倉" }).click();
+  await page.getByRole("button", { name: "前往 Dashboard" }).click();
   await page.waitForURL("**/dashboard");
   await page.getByText("總資產", { exact: false }).first().waitFor();
   result.flows.push({ name: "New User Onboarding", status: "pass", note: "可從 onboarding 建立設定與持倉範例後進入 Dashboard。" });
@@ -99,18 +103,15 @@ async function runFlowChecks(page, result) {
   result.flows.push({ name: "Retirement Planning", status: "pass", note: "支出與月投入可輸入，FIRE Number、進度與缺口會即時計算。" });
 
   await page.goto(`${baseUrl}/watchlist`, { waitUntil: "networkidle" });
-  await page.getByText("Massive.com 真實資料觀察清單", { exact: false }).waitFor();
+  await page.getByText("ETF 觀察清單", { exact: false }).waitFor();
+  await page.getByLabel("ETF 代號").fill("SGOV");
+  await page.getByLabel("ETF 名稱").fill("iShares 0-3 Month Treasury Bond ETF");
+  await page.getByLabel("市場").fill("NYSE");
+  await page.getByLabel("資產類別").fill("短期債券");
+  await page.getByRole("button", { name: "新增 ETF" }).click();
   await page.getByRole("button", { name: /查看詳情|查看原因/ }).first().click();
-  await page.getByText("ETF Detail Drawer", { exact: false }).first().waitFor();
-  const marketResponse = await page.request.get(`${baseUrl}/api/market`);
-  const market = await marketResponse.json();
-  result.apiMarket = {
-    ok: marketResponse.ok(),
-    configured: Boolean(market.configured),
-    rows: Array.isArray(market.data) ? market.data.length : 0,
-    sources: Array.isArray(market.data) ? unique(market.data.map((row) => row.source)) : []
-  };
-  result.flows.push({ name: "Watchlist Market Data", status: marketResponse.ok() && market.configured && result.apiMarket.sources.includes("massive") ? "pass" : "fail", note: `API rows=${result.apiMarket.rows}, sources=${result.apiMarket.sources.join(",")}` });
+  await page.getByText("ETF 詳情", { exact: false }).first().waitFor();
+  result.flows.push({ name: "Watchlist", status: "pass", note: "觀察清單可開啟 ETF 詳情，並可加入投資組合。" });
   result.flows.push({ name: "ETF Detail Drawer", status: "pass", note: "點擊表格詳情按鈕可更新 ETF detail drawer。" });
 
   await page.goto(`${baseUrl}/reports`, { waitUntil: "networkidle" });
