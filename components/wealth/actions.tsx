@@ -5,14 +5,20 @@ import { CheckCircle2, Plus, RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { readAccountState, writeAccountState } from "@/lib/account-store";
-import { watchSymbols } from "@/lib/wealth-data";
 
 export function SearchBox() {
   const [query, setQuery] = useState("");
-  const results = useMemo(
-    () => watchSymbols.filter((symbol) => symbol.toLowerCase().includes(query.toLowerCase())),
-    [query]
-  );
+  const [symbols, setSymbols] = useState<string[]>([]);
+  const results = useMemo(() => symbols.filter((symbol) => symbol.toLowerCase().includes(query.toLowerCase())), [query, symbols]);
+
+  useEffect(() => {
+    function syncSymbols() {
+      setSymbols(readAccountState().holdings.map((holding) => holding.etf));
+    }
+    syncSymbols();
+    window.addEventListener("wealthflow:account-updated", syncSymbols);
+    return () => window.removeEventListener("wealthflow:account-updated", syncSymbols);
+  }, []);
 
   return (
     <div className="relative hidden md:block">
@@ -40,26 +46,21 @@ export function SearchBox() {
 }
 
 export function SyncPricesButton({ compact = false }: { compact?: boolean }) {
-  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "done">("idle");
 
-  async function sync() {
+  function sync() {
     setState("loading");
-    try {
-      const response = await fetch("/api/market", { cache: "no-store" });
-      if (!response.ok) throw new Error("sync failed");
+    window.dispatchEvent(new CustomEvent("wealthflow:account-updated"));
+    window.setTimeout(() => {
       setState("done");
-      window.dispatchEvent(new CustomEvent("wealthflow:market-sync"));
       setTimeout(() => setState("idle"), 1800);
-    } catch {
-      setState("error");
-      setTimeout(() => setState("idle"), 2400);
-    }
+    }, 300);
   }
 
   return (
     <Button onClick={sync} className="gap-2" disabled={state === "loading"}>
       {state === "loading" ? <RefreshCw className="h-4 w-4 animate-spin" /> : state === "done" ? <CheckCircle2 className="h-4 w-4 text-success" /> : <RefreshCw className="h-4 w-4" />}
-      {compact ? "" : state === "done" ? "已同步" : state === "error" ? "同步失敗" : "同步價格"}
+      {compact ? "" : state === "done" ? "已更新" : "重新整理"}
     </Button>
   );
 }
@@ -67,10 +68,11 @@ export function SyncPricesButton({ compact = false }: { compact?: boolean }) {
 export function AddTransactionButton() {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState({
     type: "買入",
     symbol: "",
-    date: "2026/06/11",
+    date: "",
     shares: "",
     price: "",
     fee: "",
@@ -112,6 +114,12 @@ export function AddTransactionButton() {
   }, [open]);
 
   function submit() {
+    const shares = Number(form.shares);
+    const price = Number(form.price);
+    if (!form.symbol.trim() || !form.date.trim() || !Number.isFinite(shares) || !Number.isFinite(price) || shares <= 0 || price <= 0) {
+      setError("請輸入有效的代號、日期、股數與價格。");
+      return;
+    }
     const current = readAccountState();
     writeAccountState({
       ...current,
@@ -119,14 +127,15 @@ export function AddTransactionButton() {
         {
           date: form.date,
           type: form.type,
-          symbol: form.symbol.toUpperCase() || "-",
-          amount: `${form.currency} ${Number(form.shares || 0) * Number(form.price || 0)}`,
-          price: form.price || "-",
+          symbol: form.symbol.toUpperCase(),
+          amount: `${form.currency} ${shares * price}`,
+          price: form.price,
           status: "已完成"
         },
         ...current.transactions
       ]
     });
+    setError("");
     setSaved(true);
     setTimeout(() => {
       setOpen(false);
@@ -168,6 +177,7 @@ export function AddTransactionButton() {
                   <ModalField label="幣別" value={form.currency} onChange={(value) => setForm((current) => ({ ...current, currency: value }))} />
                   <ModalField label="備註" value={form.notes} onChange={(value) => setForm((current) => ({ ...current, notes: value }))} />
                 </div>
+                {error ? <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
                 <div className="mt-5 flex justify-end gap-2">
                   <Button onClick={() => setOpen(false)}>取消</Button>
                   <Button variant="primary" onClick={submit}>儲存交易</Button>

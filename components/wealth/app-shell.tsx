@@ -1,14 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { CircleDollarSign, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { canEnterDashboard, readAccountState } from "@/lib/account-store";
 import { mobileRoutes, routes } from "@/lib/wealth-data";
 import { cn } from "@/lib/utils";
 import { SearchBox } from "./actions";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const account = readAccountState();
+    if (!account.isAuthenticated) {
+      router.replace("/login");
+      return;
+    }
+    if (!canEnterDashboard(account) && pathname !== "/onboarding") {
+      router.replace("/onboarding");
+      return;
+    }
+    queueMicrotask(() => setReady(true));
+  }, [pathname, router]);
+
+  if (!ready) {
+    return <main className="min-h-screen bg-background" aria-label="載入中" />;
+  }
+
   return (
     <main className="min-h-screen bg-background pb-20 text-foreground lg:pb-0">
       <div className="grid min-h-screen lg:grid-cols-[272px_1fr]">

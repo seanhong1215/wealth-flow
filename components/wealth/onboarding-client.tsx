@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, CircleDollarSign, Plus, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { readAccountState, writeAccountState } from "@/lib/account-store";
+import { canEnterDashboard, isHoldingValid, isProfileValid, readAccountState, writeAccountState } from "@/lib/account-store";
 
 const blankHolding = {
   etf: "",
@@ -20,33 +19,58 @@ const blankHolding = {
 export function OnboardingClient() {
   const router = useRouter();
   const [profile, setProfile] = useState({
-    age: "35",
-    retirementAge: "60",
-    monthlyInvestment: "500",
-    monthlyExpense: "2800",
+    age: "",
+    retirementAge: "",
+    monthlyInvestment: "",
+    monthlyExpense: "",
     style: "均衡" as "保守" | "均衡" | "成長"
   });
   const [holding, setHolding] = useState(blankHolding);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const account = readAccountState();
+    if (!account.isAuthenticated) router.replace("/login");
+  }, [router]);
+
+  const profilePayload = useMemo(() => ({
+    age: Number(profile.age),
+    retirementAge: Number(profile.retirementAge),
+    monthlyInvestment: Number(profile.monthlyInvestment),
+    monthlyExpense: Number(profile.monthlyExpense),
+    style: profile.style
+  }), [profile]);
+
+  const holdingPayload = useMemo(() => ({
+    etf: holding.etf.toUpperCase(),
+    name: holding.name,
+    asset: "自訂 ETF",
+    shares: Number(holding.shares || 0),
+    avg: Number(holding.avg || 0),
+    current: 0,
+    target: Number(holding.target || 0),
+    currency: holding.currency
+  }), [holding]);
 
   function saveProfile() {
+    if (!isProfileValid(profilePayload)) {
+      setError("請確認年齡、退休年齡、每月投資金額與生活支出皆正確。");
+      return false;
+    }
     const current = readAccountState();
     writeAccountState({
       ...current,
-      profile: {
-        age: Number(profile.age),
-        retirementAge: Number(profile.retirementAge),
-        monthlyInvestment: Number(profile.monthlyInvestment),
-        monthlyExpense: Number(profile.monthlyExpense),
-        style: profile.style
-      }
+      profile: profilePayload
     });
+    setError("");
     setMessage("投資設定已綁定到目前帳號。");
+    return true;
   }
 
   function addHolding() {
-    if (!holding.etf || !holding.name) {
-      setMessage("請輸入 ETF 代號與名稱。");
+    if (!isHoldingValid(holdingPayload)) {
+      setError("請輸入有效的 ETF 代號、名稱、股數、成本與目標配置。");
       return;
     }
     const current = readAccountState();
@@ -54,24 +78,22 @@ export function OnboardingClient() {
       ...current,
       holdings: [
         ...current.holdings.filter((item) => item.etf !== holding.etf.toUpperCase()),
-        {
-          etf: holding.etf.toUpperCase(),
-          name: holding.name,
-          asset: "自訂 ETF",
-          shares: Number(holding.shares || 0),
-          avg: Number(holding.avg || 0),
-          current: 0,
-          target: Number(holding.target || 0),
-          currency: holding.currency
-        }
+        holdingPayload
       ]
     });
     setHolding(blankHolding);
+    setError("");
     setMessage("ETF 持倉已加入目前帳號。");
   }
 
   function continueToDashboard() {
-    saveProfile();
+    if (!saveProfile()) return;
+    const next = { ...readAccountState(), profile: profilePayload, onboardingComplete: true };
+    writeAccountState(next);
+    if (!canEnterDashboard(next)) {
+      setError("請先完成投資設定並加入至少一筆有效 ETF 持倉後再進入儀表板。");
+      return;
+    }
     router.push("/dashboard");
   }
 
@@ -102,13 +124,12 @@ export function OnboardingClient() {
             ))}
           </div>
           {message ? <p className="mt-5 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-success" role="status">{message}</p> : null}
+          {error ? <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-danger" role="alert">{error}</p> : null}
           <div className="mt-7 flex flex-wrap gap-3">
             <a href="#profile" className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-blue-700">
               開始建立
             </a>
-            <Link href="/dashboard" className="inline-flex h-10 items-center justify-center rounded-md border border-border bg-white px-4 text-sm font-medium hover:bg-slate-50">
-              前往儀表板
-            </Link>
+            <Button onClick={continueToDashboard}>前往儀表板</Button>
           </div>
         </Card>
 
@@ -159,7 +180,7 @@ export function OnboardingClient() {
               <Field label="目標配置 %" value={holding.target} onChange={(value) => setHolding((current) => ({ ...current, target: value }))} />
             </div>
             <div className="flex justify-end border-t border-border px-5 py-4">
-              <Button variant="primary" onClick={continueToDashboard}>前往 Dashboard</Button>
+              <Button variant="primary" onClick={continueToDashboard}>前往儀表板</Button>
             </div>
           </Card>
         </div>

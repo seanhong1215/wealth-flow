@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { AccountState, readAccountState } from "@/lib/account-store";
+import { AccountState, emptyAccountState, readAccountState } from "@/lib/account-store";
 import { EmptyState, KpiCard } from "./primitives";
 
 export function ReportsClient() {
-  const [account, setAccount] = useState<AccountState>(() => readAccountState());
+  const [account, setAccount] = useState<AccountState>(emptyAccountState);
 
   useEffect(() => {
     function load() {

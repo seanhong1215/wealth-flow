@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { PieChart, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { readAccountState, AccountState } from "@/lib/account-store";
+import { readAccountState, AccountState, emptyAccountState } from "@/lib/account-store";
 import { months } from "@/lib/wealth-data";
 import { EmptyState, KpiCard, ProgressBar, TableHeader } from "./primitives";
 
 export function AccountDashboard() {
-  const [account, setAccount] = useState<AccountState>(() => readAccountState());
+  const [account, setAccount] = useState<AccountState>(emptyAccountState);
 
   useEffect(() => {
     function load() {

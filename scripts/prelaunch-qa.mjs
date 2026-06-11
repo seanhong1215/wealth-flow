@@ -13,7 +13,7 @@ const pages = [
   { path: "/retirement-planner", name: "retirement-planner", title: "估算退休準備度" },
   { path: "/watchlist", name: "watchlist", title: "追蹤關注 ETF" },
   { path: "/reports", name: "reports", title: "每月投資報告" },
-  { path: "/settings", name: "settings", title: "個人資料、API 與金流策略" }
+  { path: "/settings", name: "settings", title: "偏好設定" }
 ];
 
 const viewports = [
@@ -58,33 +58,54 @@ async function collectPageSignals(page) {
 }
 
 async function runFlowChecks(page, result) {
-  await page.goto(`${baseUrl}/onboarding`, { waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
   await page.evaluate(() => localStorage.removeItem("wealthflow:user:seanhong1215:v2"));
-  await page.reload({ waitUntil: "networkidle" });
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: "networkidle" });
+  await page.waitForURL("**/login");
+  await page.getByLabel("Email").fill("seanhong1215@example.com");
+  await page.getByRole("button", { name: "登入" }).click();
+  await page.waitForURL("**/onboarding");
+  await page.getByRole("button", { name: "前往儀表板" }).first().click();
+  await page.getByText("請確認年齡", { exact: false }).waitFor();
+  await page.getByLabel("目前年齡").fill("35");
+  await page.getByLabel("退休目標年齡").fill("60");
+  await page.getByLabel("每月投資金額").fill("500");
+  await page.getByLabel("每月生活支出").fill("2800");
   await page.getByLabel("ETF 代號").fill("CSPX");
   await page.getByLabel("ETF 名稱").fill("iShares Core S&P 500 UCITS ETF");
   await page.getByLabel("股數").fill("10");
   await page.getByLabel("平均成本").fill("500");
   await page.getByLabel("目標配置 %").fill("60");
   await page.getByRole("button", { name: "加入持倉" }).click();
-  await page.getByRole("button", { name: "前往 Dashboard" }).click();
+  await page.getByRole("button", { name: "前往儀表板" }).last().click();
   await page.waitForURL("**/dashboard");
   await page.getByText("總資產", { exact: false }).first().waitFor();
-  result.flows.push({ name: "New User Onboarding", status: "pass", note: "可從 onboarding 建立設定與持倉範例後進入 Dashboard。" });
+  result.flows.push({ name: "New User Onboarding", status: "pass", note: "未登入會被擋下；登入後需完成合法投資設定才可進入 Dashboard。" });
 
   await page.getByRole("button", { name: "新增交易" }).first().click();
+  await page.getByRole("button", { name: "儲存交易" }).click();
+  await page.getByText("請輸入有效的代號", { exact: false }).waitFor();
+  await page.getByLabel("代號").fill("CSPX");
+  await page.getByLabel("日期").fill("2026/06/11");
+  await page.getByLabel("股數").fill("1");
+  await page.getByLabel("價格").fill("500");
   await page.getByRole("button", { name: "儲存交易" }).click();
   await page.getByText("交易已成功新增", { exact: false }).waitFor();
   result.flows.push({ name: "Add Transaction", status: "pass", note: "Modal 可開啟、儲存後顯示成功狀態。" });
 
   await page.goto(`${baseUrl}/portfolio`, { waitUntil: "networkidle" });
+  await page.getByLabel("ETF 代號").fill("AGGU");
+  await page.getByLabel("ETF 名稱").fill("iShares Global Aggregate Bond UCITS ETF");
+  await page.getByLabel("股數").fill("5");
+  await page.getByLabel("平均成本").fill("10");
+  await page.getByLabel("目標配置 %").fill("40");
   await page.getByRole("button", { name: "新增持倉" }).click();
   await page.getByText("AGGU", { exact: false }).first().waitFor();
   await page.getByRole("button", { name: "編輯 CSPX" }).click();
   await page.getByText("CSPX 已更新股數與目標配置", { exact: false }).waitFor();
   await page.getByRole("button", { name: "刪除 AGGU" }).click();
   await page.getByText("AGGU 已刪除", { exact: false }).waitFor();
-  await page.getByLabel("VWRA 目標配置").fill("25");
+  await page.getByLabel("CSPX 目標配置").fill("100");
   await page.getByRole("button", { name: "套用目標配置" }).click();
   await page.getByText("目標配置已更新", { exact: false }).waitFor();
   result.flows.push({ name: "Portfolio Add/Edit/Delete Holding", status: "pass", note: "可新增 AGGU、編輯 CSPX、刪除 AGGU，並套用配置。" });
@@ -129,7 +150,7 @@ const result = {
   flows: [],
   consoleErrors: [],
   pageErrors: [],
-  apiMarket: null
+  accountData: null
 };
 
 const browser = await chromium.launch();

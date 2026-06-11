@@ -12,12 +12,22 @@ async function run() {
   const steps = [];
 
   try {
-    await page.goto(`${baseUrl}/onboarding`, { waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/login`, { waitUntil: "networkidle" });
     await page.evaluate(() => localStorage.removeItem("wealthflow:user:seanhong1215:v2"));
-    await page.reload({ waitUntil: "networkidle" });
+    await page.goto(`${baseUrl}/dashboard`, { waitUntil: "networkidle" });
+    await page.waitForURL("**/login");
+    await page.getByLabel("Email").fill("seanhong1215@example.com");
+    await page.getByRole("button", { name: "登入" }).click();
+    await page.waitForURL("**/onboarding");
     await expectText(page, "登入 / Onboarding");
     await expectText(page, "建立投資設定");
     await expectText(page, "加入 ETF 持倉");
+    await page.getByRole("button", { name: "前往儀表板" }).first().click();
+    await expectText(page, "請確認年齡");
+    await page.getByLabel("目前年齡").fill("35");
+    await page.getByLabel("退休目標年齡").fill("60");
+    await page.getByLabel("每月投資金額").fill("500");
+    await page.getByLabel("每月生活支出").fill("2800");
     await page.getByLabel("ETF 代號").fill("CSPX");
     await page.getByLabel("ETF 名稱").fill("iShares Core S&P 500 UCITS ETF");
     await page.getByLabel("股數").fill("10");
@@ -25,13 +35,19 @@ async function run() {
     await page.getByLabel("目標配置 %").fill("60");
     await page.getByRole("button", { name: "加入持倉" }).click();
     await expectText(page, "ETF 持倉已加入目前帳號");
-    await page.getByRole("button", { name: "前往 Dashboard" }).click();
+    await page.getByRole("button", { name: "前往儀表板" }).last().click();
     await page.waitForURL("**/dashboard");
     await expectText(page, "總資產");
     steps.push("登入 / Onboarding -> Dashboard");
 
     await page.getByRole("button", { name: "新增交易" }).first().click();
     await expectText(page, "支援買入、賣出與股息紀錄");
+    await page.getByRole("button", { name: "儲存交易" }).click();
+    await expectText(page, "請輸入有效的代號");
+    await page.getByLabel("代號").fill("CSPX");
+    await page.getByLabel("日期").fill("2026/06/11");
+    await page.getByLabel("股數").fill("1");
+    await page.getByLabel("價格").fill("500");
     await page.getByRole("button", { name: "儲存交易" }).click();
     await expectText(page, "交易已成功新增");
     steps.push("新增交易流程");
